@@ -1,0 +1,65 @@
+# Schedule Focus Agent to run only during waking hours
+# Saves Railway compute hours (12 hrs/day instead of 24)
+#
+# Times are in UTC. Adjust for your timezone:
+# PKT (UTC+5): 9 AM PKT = 4 AM UTC, 9 PM PKT = 4 PM UTC
+
+name: Schedule Bot
+
+on:
+  schedule:
+    # Start bot at 9 AM PKT (4:00 UTC)
+    - cron: '0 4 * * *'
+    # Stop bot at 9 PM PKT (16:00 UTC)
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'start'
+        type: choice
+        options:
+          - start
+          - stop
+
+jobs:
+  toggle-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine action
+        id: action
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "action=${{ github.event.inputs.action }}" >> $GITHUB_OUTPUT
+          else
+            # Check current hour (UTC)
+            HOUR=$(date -u +%H)
+            if [ "$HOUR" = "04" ]; then
+              echo "action=start" >> $GITHUB_OUTPUT
+            else
+              echo "action=stop" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Start Railway Service
+        if: steps.action.outputs.action == 'start'
+        run: |
+          curl -X POST "https://backboard.railway.app/graphql/v2" \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "mutation { serviceInstanceUpdate(serviceId: \"${{ secrets.RAILWAY_SERVICE_ID }}\", input: { numReplicas: 1 }) { id } }"
+            }'
+          echo "Bot started!"
+
+      - name: Stop Railway Service
+        if: steps.action.outputs.action == 'stop'
+        run: |
+          curl -X POST "https://backboard.railway.app/graphql/v2" \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "mutation { serviceInstanceUpdate(serviceId: \"${{ secrets.RAILWAY_SERVICE_ID }}\", input: { numReplicas: 0 }) { id } }"
+            }'
+          echo "Bot stopped!"

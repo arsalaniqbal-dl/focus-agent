@@ -1,0 +1,379 @@
+"""
+Focus Agent - A Slack bot for daily task management and focus.
+
+Usage:
+    DM the bot with:
+    - "add [task]" - Add a new task
+    - "list" or "tasks" - Show pending tasks
+    - "done [id]" - Mark task as complete
+    - "delete [id]" - Remove a task
+    - "focus" - Start morning planning
+    - "refocus" - Get back on track mid-day
+    - "help" - Show commands
+"""
+import os
+import logging
+from datetime import datetime
+from dotenv import load_dotenv
+from slack_bolt import App
+from slack_bolt.adapter.socket_mode import SocketModeHandler
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import pytz
+
+import db
+import articles
+
+# Load environment
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize Slack app (Socket Mode for easy local dev)
+app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
+
+# User config
+MY_USER_ID = os.environ.get("MY_USER_ID")
+MORNING_TIME = os.environ.get("MORNING_TIME", "08:00")
+TIMEZONE = os.environ.get("TIMEZONE", "America/Los_Angeles")
+
+
+# ============================================
+# Helper Functions
+# ============================================
+
+def format_task_list(tasks: list, show_ids: bool = True) -> str:
+    """Format tasks for display."""
+    if not tasks:
+        return "_No pending tasks._"
+
+    lines = []
+    for t in tasks:
+        check = ":white_check_mark:" if t["status"] == "completed" else ":white_square:"
+        carryover = f" (day {t['carryover_count'] + 1})" if t["carryover_count"] > 0 else ""
+        area_tag = f"[{t['area']}]" if t["area"] != "work" else ""
+
+        if show_ids:
+            lines.append(f"{check} *{t['id']}*. {t['text']}{carryover} {area_tag}")
+        else:
+            lines.append(f"{check} {t['text']}{carryover} {area_tag}")
+
+    return "\n".join(lines)
+
+
+def send_dm(user_id: str, text: str, blocks: list = None):
+    """Send a direct message to a user."""
+    try:
+        response = app.client.conversations_open(users=[user_id])
+        channel_id = response["channel"]["id"]
+        app.client.chat_postMessage(
+            channel=channel_id,
+            text=text,
+            blocks=blocks
+        )
+    except Exception as e:
+        logger.error(f"Failed to send DM: {e}")
+
+
+# ============================================
+# Morning Planning Flow
+# ============================================
+
+def morning_planning_message() -> tuple:
+    """Generate the morning planning message."""
+    tasks = db.get_pending_tasks()
+    stuck = db.get_stuck_tasks(min_carryover=3)
+
+    # Increment carryover for all pending tasks (new day)
+    for t in tasks:
+        db.increment_carryover(t["id"])
+
+    text = ":sunrise: *Good morning! Let's plan your day.*\n\n"
+
+    if tasks:
+        text += "*Carrying over from yesterday:*\n"
+        text += format_task_list(tasks)
+        text += "\n\n"
+
+    if stuck:
+        text += ":warning: *These have been stuck for a while:*\n"
+        for t in stuck:
+            text += f"  - {t['text']} (day {t['carryover_count'] + 1})\n"
+        text += "\n"
+
+    # Daily article recommendation
+    title, url, description = articles.get_daily_article()
+    text += articles.format_article_block(title, url, description)
+    text += "\n\n"
+
+    text += "*What would make today a win?*\n"
+    text += "_Reply with your focus for today, or type `add [task]` to add items._"
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": text}
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "Show All Tasks"},
+                    "action_id": "show_all_tasks"
+                },
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "I'm Ready to Work"},
+                    "action_id": "ready_to_work",
+                    "style": "primary"
+                }
+            ]
+        }
+    ]
+
+    return text, blocks
+
+
+def trigger_morning_planning():
+    """Send morning planning DM (called by scheduler)."""
+    if MY_USER_ID:
+        logger.info(f"Triggering morning planning for {MY_USER_ID}")
+        text, blocks = morning_planning_message()
+        send_dm(MY_USER_ID, text, blocks)
+
+
+# ============================================
+# Message Handlers
+# ============================================
+
+@app.event("message")
+def handle_message(event, say):
+    """Handle direct messages to the bot."""
+    # Only respond to DMs (not channels)
+    if event.get("channel_type") != "im":
+        return
+
+    # Ignore bot's own messages
+    if event.get("bot_id"):
+        return
+
+    text = event.get("text", "").strip().lower()
+    original_text = event.get("text", "").strip()
+
+    # --- ADD TASK ---
+    if text.startswith("add "):
+        task_text = original_text[4:].strip()
+        if task_text:
+            # Check for area tag
+            area = "work"
+            if task_text.startswith("[side]") or task_text.startswith("[project]"):
+                area = "side_project"
+                task_text = task_text.split("]", 1)[1].strip()
+
+            task_id = db.add_task(task_text, area)
+            say(f":white_check_mark: Added: *{task_text}* (#{task_id})")
+        else:
+            say("Usage: `add [task description]`\nOptional: `add [side] task` for side projects")
+
+    # --- LIST TASKS ---
+    elif text in ["list", "tasks", "show", "ls"]:
+        tasks = db.get_pending_tasks()
+        say(f"*Your Tasks:*\n{format_task_list(tasks)}")
+
+    # --- COMPLETE TASK ---
+    elif text.startswith("done ") or text.startswith("complete "):
+        try:
+            parts = text.split()
+            task_id = int(parts[1].replace("#", ""))
+            if db.complete_task(task_id):
+                say(f":tada: Marked #{task_id} as done!")
+            else:
+                say(f"Couldn't find task #{task_id}")
+        except (IndexError, ValueError):
+            say("Usage: `done [task_id]` (e.g., `done 3`)")
+
+    # --- DELETE TASK ---
+    elif text.startswith("delete ") or text.startswith("remove "):
+        try:
+            parts = text.split()
+            task_id = int(parts[1].replace("#", ""))
+            if db.delete_task(task_id):
+                say(f":wastebasket: Deleted task #{task_id}")
+            else:
+                say(f"Couldn't find task #{task_id}")
+        except (IndexError, ValueError):
+            say("Usage: `delete [task_id]` (e.g., `delete 3`)")
+
+    # --- MORNING FOCUS ---
+    elif text in ["focus", "morning", "plan", "start"]:
+        text_msg, blocks = morning_planning_message()
+        say(text=text_msg, blocks=blocks)
+
+    # --- REFOCUS ---
+    elif text in ["refocus", "stuck", "help me focus"]:
+        plan = db.get_today_plan()
+        tasks = db.get_pending_tasks()
+
+        if not tasks:
+            say(":thinking_face: You have no pending tasks. Add some with `add [task]`")
+            return
+
+        # Find the smallest/easiest next step
+        msg = ":dart: *Let's refocus.*\n\n"
+
+        if plan and plan.get("win_criteria"):
+            msg += f"This morning you said a win would be: _{plan['win_criteria']}_\n\n"
+
+        msg += "*Your pending tasks:*\n"
+        msg += format_task_list(tasks[:5])  # Show top 5
+
+        if len(tasks) > 5:
+            msg += f"\n_...and {len(tasks) - 5} more_\n"
+
+        msg += "\n:point_right: *Pick ONE. What's the smallest next step you can take right now?*"
+
+        say(msg)
+
+    # --- SET WIN CRITERIA ---
+    elif text.startswith("win:") or text.startswith("today:"):
+        win_text = original_text.split(":", 1)[1].strip()
+        if win_text:
+            tasks = db.get_pending_tasks()
+            focus_items = [t["text"] for t in tasks[:3]]  # Top 3
+            db.save_daily_plan(focus_items, win_text)
+            say(f":star: Got it! Today's win: *{win_text}*\n\nNow go make it happen!")
+        else:
+            say("Usage: `win: [what would make today a win]`")
+
+    # --- ARTICLE / READ ---
+    elif text in ["read", "article", "reading"]:
+        title, url, description = articles.get_daily_article()
+        say(articles.format_article_block(title, url, description))
+
+    # --- HELP ---
+    elif text in ["help", "?", "commands"]:
+        help_text = """
+:wave: *Focus Agent Commands*
+
+*Adding & Managing Tasks:*
+- `add [task]` - Add a new task
+- `add [side] task` - Add to side projects
+- `list` - Show all pending tasks
+- `done [id]` - Mark task complete
+- `delete [id]` - Remove a task
+
+*Planning & Focus:*
+- `focus` - Start morning planning
+- `refocus` - Get back on track
+- `win: [text]` - Set today's win criteria
+- `read` - Get today's article recommendation
+
+*Tips:*
+- I'll DM you each morning at {time}
+- Tasks that carry over get tracked
+- If something's stuck for 3+ days, I'll ask why
+        """.format(time=MORNING_TIME)
+        say(help_text)
+
+    # --- UNKNOWN ---
+    else:
+        # Treat as a task if it looks like one
+        if len(original_text) > 3 and not original_text.startswith("/"):
+            say(f"Not sure what you mean. Did you want to add a task?\n`add {original_text}`\n\nType `help` for commands.")
+
+
+# ============================================
+# Button Actions
+# ============================================
+
+@app.action("show_all_tasks")
+def handle_show_all(ack, body, client):
+    """Handle 'Show All Tasks' button."""
+    ack()
+    tasks = db.get_pending_tasks()
+    user_id = body["user"]["id"]
+
+    work_tasks = [t for t in tasks if t["area"] == "work"]
+    side_tasks = [t for t in tasks if t["area"] == "side_project"]
+
+    msg = "*All Pending Tasks:*\n\n"
+    if work_tasks:
+        msg += "*Work:*\n" + format_task_list(work_tasks) + "\n\n"
+    if side_tasks:
+        msg += "*Side Projects:*\n" + format_task_list(side_tasks) + "\n"
+    if not work_tasks and not side_tasks:
+        msg += "_No tasks yet. Add some with `add [task]`_"
+
+    send_dm(user_id, msg)
+
+
+@app.action("ready_to_work")
+def handle_ready(ack, body, client):
+    """Handle 'Ready to Work' button."""
+    ack()
+    user_id = body["user"]["id"]
+    send_dm(
+        user_id,
+        ":muscle: *Let's go!* Focus on what matters.\n\nType `refocus` anytime you need to get back on track."
+    )
+
+
+# ============================================
+# Scheduler Setup
+# ============================================
+
+def setup_scheduler():
+    """Set up the morning planning scheduler."""
+    scheduler = BackgroundScheduler(timezone=pytz.timezone(TIMEZONE))
+
+    hour, minute = MORNING_TIME.split(":")
+    scheduler.add_job(
+        trigger_morning_planning,
+        CronTrigger(hour=int(hour), minute=int(minute)),
+        id="morning_planning",
+        replace_existing=True
+    )
+
+    scheduler.start()
+    logger.info(f"Scheduler started. Morning planning at {MORNING_TIME} {TIMEZONE}")
+    return scheduler
+
+
+# ============================================
+# Main
+# ============================================
+
+if __name__ == "__main__":
+    # Verify config
+    if not os.environ.get("SLACK_BOT_TOKEN"):
+        print("Error: SLACK_BOT_TOKEN not set. Copy .env.example to .env and fill in values.")
+        exit(1)
+
+    if not os.environ.get("SLACK_APP_TOKEN"):
+        print("Error: SLACK_APP_TOKEN not set. Enable Socket Mode in your Slack app.")
+        exit(1)
+
+    if not MY_USER_ID:
+        print("Warning: MY_USER_ID not set. Scheduled morning messages won't work.")
+
+    # Start scheduler
+    scheduler = setup_scheduler()
+
+    # Start bot
+    print(f"""
+    ================================
+    Focus Agent is running!
+    ================================
+    Morning planning: {MORNING_TIME} {TIMEZONE}
+    User ID: {MY_USER_ID or 'Not set'}
+
+    DM the bot in Slack to get started.
+    Type 'help' for commands.
+    ================================
+    """)
+
+    handler = SocketModeHandler(app, os.environ.get("SLACK_APP_TOKEN"))
+    handler.start()

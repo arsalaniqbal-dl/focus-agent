@@ -267,6 +267,26 @@ def handle_message(event, say):
         else:
             say("Usage: `win: [what would make today a win]`")
 
+    # --- DEMO (sample morning message) ---
+    elif text == "demo":
+        # Create sample data for demo
+        demo_text = ":sunrise: *Good morning! Let's plan your day.*\n\n"
+        demo_text += ":repeat: *Spillovers from previous days:*\n"
+        demo_text += "  - Finish API documentation (day 2)\n"
+        demo_text += "  - Review pull request #42 (day 3) :warning:\n\n"
+        demo_text += ":clipboard: *Added yesterday (not yet started):*\n"
+        demo_text += "  - Set up monitoring alerts\n"
+        demo_text += "  - Call with design team\n\n"
+        demo_text += "_You have 4 pending items. 2 carried over - consider prioritizing these today._\n\n"
+        demo_text += ":rotating_light: *Stuck for 3+ days (what's blocking these?):*\n"
+        demo_text += "  - Review pull request #42 (day 3)\n\n"
+        title, url, description = articles.get_daily_article()
+        demo_text += articles.format_article_block(title, url, description)
+        demo_text += "\n\n"
+        demo_text += "*What would make today a win?*\n"
+        demo_text += "_Reply with your focus for today, or type `add [task]` to add items._"
+        say(demo_text)
+
     # --- ARTICLE / READ ---
     elif text in ["read", "article", "reading"]:
         title, url, description = articles.get_daily_article()

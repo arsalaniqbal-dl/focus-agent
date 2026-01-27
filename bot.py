@@ -93,12 +93,31 @@ def morning_planning_message() -> tuple:
     text = ":sunrise: *Good morning! Let's plan your day.*\n\n"
 
     if tasks:
-        text += "*Carrying over from yesterday:*\n"
-        text += format_task_list(tasks)
-        text += "\n\n"
+        # Separate fresh tasks (day 1) from spillovers
+        fresh_tasks = [t for t in tasks if t['carryover_count'] == 0]
+        spillover_tasks = [t for t in tasks if t['carryover_count'] > 0]
+
+        if spillover_tasks:
+            text += ":repeat: *Spillovers from previous days:*\n"
+            for t in spillover_tasks:
+                days = t['carryover_count'] + 1
+                warning = " :warning:" if days >= 3 else ""
+                text += f"  - {t['text']} _(day {days})_{warning}\n"
+            text += "\n"
+
+        if fresh_tasks:
+            text += ":clipboard: *Added yesterday (not yet started):*\n"
+            text += format_task_list(fresh_tasks)
+            text += "\n\n"
+
+        # Summary to prompt action
+        total = len(tasks)
+        if spillover_tasks:
+            text += f"_You have {total} pending item{'s' if total > 1 else ''}. "
+            text += f"{len(spillover_tasks)} carried over - consider prioritizing these today._\n\n"
 
     if stuck:
-        text += ":warning: *These have been stuck for a while:*\n"
+        text += ":rotating_light: *Stuck for 3+ days (what's blocking these?):*\n"
         for t in stuck:
             text += f"  - {t['text']} (day {t['carryover_count'] + 1})\n"
         text += "\n"

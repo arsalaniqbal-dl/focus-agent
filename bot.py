@@ -182,20 +182,57 @@ def handle_message(event, say):
     text = event.get("text", "").strip().lower()
     original_text = event.get("text", "").strip()
 
-    # --- ADD TASK ---
+    # --- ADD TASK (single or bulleted list) ---
     if text.startswith("add "):
         task_text = original_text[4:].strip()
         if task_text:
-            # Check for area tag
-            area = "work"
-            if task_text.startswith("[side]") or task_text.startswith("[project]"):
-                area = "side_project"
-                task_text = task_text.split("]", 1)[1].strip()
+            # Check if it's a bulleted list (multiple tasks)
+            import re
+            lines = task_text.split('\n')
+            bullet_pattern = re.compile(r'^[\-\*\•]\s*(.+)$|^(\d+[\.\)]\s*)(.+)$')
 
-            task_id = db.add_task(task_text, area)
-            say(f":white_check_mark: Added: *{task_text}* (#{task_id})")
+            tasks_to_add = []
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                match = bullet_pattern.match(line)
+                if match:
+                    # Extract task text from bullet or numbered list
+                    task = match.group(1) or match.group(3)
+                    if task:
+                        tasks_to_add.append(task.strip())
+                elif len(lines) == 1:
+                    # Single task, no bullet
+                    tasks_to_add.append(line)
+
+            # If no bullets found but multiple lines, treat each line as a task
+            if not tasks_to_add and len(lines) > 1:
+                tasks_to_add = [l.strip() for l in lines if l.strip()]
+
+            # Fallback: single task
+            if not tasks_to_add:
+                tasks_to_add = [task_text]
+
+            # Add all tasks
+            added = []
+            for task in tasks_to_add:
+                area = "work"
+                if task.lower().startswith("[side]") or task.lower().startswith("[project]"):
+                    area = "side_project"
+                    task = task.split("]", 1)[1].strip()
+                task_id = db.add_task(task, area)
+                added.append(f"#{task_id} {task}")
+
+            if len(added) == 1:
+                say(f":white_check_mark: Added: *{tasks_to_add[0]}* (#{task_id})")
+            else:
+                response = f":white_check_mark: Added {len(added)} tasks:\n"
+                for item in added:
+                    response += f"  • {item}\n"
+                say(response)
         else:
-            say("Usage: `add [task description]`\nOptional: `add [side] task` for side projects")
+            say("Usage: `add [task description]`\nOptional: `add [side] task` for side projects\n\nYou can also add multiple tasks with a bulleted list:\n```\nadd\n- Task one\n- Task two\n- Task three\n```")
 
     # --- LIST TASKS ---
     elif text in ["list", "tasks", "show", "ls"]:

@@ -1,4 +1,4 @@
-# Deploy Focus Agent to Railway (12 hrs/day)
+# Deploy FocusPrompter to Railway (12 hrs/day)
 
 Run the bot only during waking hours to maximize Railway's free tier.
 
@@ -14,7 +14,7 @@ cd /Users/arsalaniqbal/Projects/OperatingSystem/focus-agent
 # Initialize git repo
 git init
 git add .
-git commit -m "Initial commit: Focus Agent"
+git commit -m "Initial commit: FocusPrompter"
 
 # Create repo on GitHub, then:
 git remote add origin https://github.com/YOUR_USERNAME/focus-agent.git

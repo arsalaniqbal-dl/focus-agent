@@ -1,5 +1,5 @@
 """
-Focus Agent - A Slack bot for daily task management and focus.
+FocusPrompter - A Slack bot for daily task management and focus.
 
 Usage:
     DM the bot with:
@@ -332,7 +332,7 @@ def handle_message(event, say):
     # --- HELP ---
     elif text in ["help", "?", "commands"]:
         help_text = """
-:wave: *Focus Agent Commands*
+:wave: *FocusPrompter Commands*
 
 *Adding & Managing Tasks:*
 - `add [task]` - Add a new task
@@ -441,7 +441,7 @@ if __name__ == "__main__":
     # Start bot
     print(f"""
     ================================
-    Focus Agent is running!
+    FocusPrompter is running!
     ================================
     Morning planning: {MORNING_TIME} {TIMEZONE}
     User ID: {MY_USER_ID or 'Not set'}

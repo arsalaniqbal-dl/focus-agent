@@ -1,4 +1,4 @@
-"""Generate profile picture for Focus Agent Slack bot."""
+"""Generate profile picture for FocusPrompter Slack bot."""
 from PIL import Image, ImageDraw
 
 def create_profile_image(size=512):

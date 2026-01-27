@@ -1,4 +1,4 @@
-# Focus Agent - Setup Guide
+# FocusPrompter - Setup Guide
 
 A personal Slack bot for daily task management and focus.
 
@@ -20,7 +20,7 @@ python bot.py
 
 1. Go to https://api.slack.com/apps
 2. Click **Create New App** > **From scratch**
-3. Name: "Focus Agent" (or whatever you want)
+3. Name: "FocusPrompter" (or whatever you want)
 4. Workspace: Select your workspace
 5. Click **Create App**
 
@@ -92,7 +92,7 @@ python bot.py
 You should see:
 ```
 ================================
-Focus Agent is running!
+FocusPrompter is running!
 ================================
 Morning planning: 08:00 America/Los_Angeles
 User ID: U0123456789
@@ -102,7 +102,7 @@ User ID: U0123456789
 ## Testing
 
 1. Open Slack
-2. Find "Focus Agent" in your Apps (or search for it)
+2. Find "FocusPrompter" in your Apps (or search for it)
 3. Send it a DM: `help`
 4. Try: `add Test my first task`
 5. Try: `list`

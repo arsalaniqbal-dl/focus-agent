@@ -1,4 +1,4 @@
-# Schedule Focus Agent to run only during waking hours
+# Schedule FocusPrompter to run only during waking hours
 # Saves Railway compute hours (12 hrs/day instead of 24)
 #
 # Times are in UTC. Adjust for your timezone:

@@ -73,8 +73,8 @@ Socket Mode lets you run the bot locally without exposing a public URL.
 
 Edit `.env`:
 ```
-MORNING_TIME=08:00
-TIMEZONE=America/Los_Angeles
+MORNING_TIME=11:00
+TIMEZONE=Asia/Karachi
 ```
 
 Use your local timezone. Find yours at: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones

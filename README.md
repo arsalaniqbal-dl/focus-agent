@@ -131,8 +131,8 @@ Edit `.env`:
 SLACK_BOT_TOKEN=xoxb-your-bot-token
 SLACK_APP_TOKEN=xapp-your-app-token
 MY_USER_ID=U0123456789
-MORNING_TIME=08:00
-TIMEZONE=America/Los_Angeles
+MORNING_TIME=11:00
+TIMEZONE=Asia/Karachi
 ```
 
 Find your User ID: Slack → Profile → ⋯ → Copy member ID

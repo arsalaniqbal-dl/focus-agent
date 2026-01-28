@@ -36,8 +36,8 @@ app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 # User config
 MY_USER_ID = os.environ.get("MY_USER_ID")
-MORNING_TIME = os.environ.get("MORNING_TIME", "08:00")
-TIMEZONE = os.environ.get("TIMEZONE", "America/Los_Angeles")
+MORNING_TIME = os.environ.get("MORNING_TIME", "11:00")
+TIMEZONE = os.environ.get("TIMEZONE", "Asia/Karachi")
 
 
 # ============================================
@@ -403,18 +403,26 @@ def handle_ready(ack, body, client):
 
 def setup_scheduler():
     """Set up the morning planning scheduler."""
-    scheduler = BackgroundScheduler(timezone=pytz.timezone(TIMEZONE))
+    tz = pytz.timezone(TIMEZONE)
+    scheduler = BackgroundScheduler(timezone=tz)
 
     hour, minute = MORNING_TIME.split(":")
     scheduler.add_job(
         trigger_morning_planning,
         CronTrigger(hour=int(hour), minute=int(minute)),
         id="morning_planning",
-        replace_existing=True
+        replace_existing=True,
+        misfire_grace_time=300  # 5 min grace period if job missed
     )
 
     scheduler.start()
-    logger.info(f"Scheduler started. Morning planning at {MORNING_TIME} {TIMEZONE}")
+
+    # Log next scheduled run
+    job = scheduler.get_job("morning_planning")
+    if job and job.next_run_time:
+        logger.info(f"Scheduler started. Morning planning at {MORNING_TIME} {TIMEZONE}")
+        logger.info(f"Next scheduled run: {job.next_run_time.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+
     return scheduler
 
 

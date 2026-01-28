@@ -36,7 +36,7 @@ app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 # User config
 MY_USER_ID = os.environ.get("MY_USER_ID")
-MORNING_TIME = os.environ.get("MORNING_TIME", "11:53")
+MORNING_TIME = os.environ.get("MORNING_TIME", "12:05")
 TIMEZONE = os.environ.get("TIMEZONE", "Asia/Karachi")
 
 
@@ -158,10 +158,14 @@ def morning_planning_message() -> tuple:
 
 def trigger_morning_planning():
     """Send morning planning DM (called by scheduler)."""
+    logger.info(f"=== SCHEDULER TRIGGERED at {datetime.now()} ===")
     if MY_USER_ID:
-        logger.info(f"Triggering morning planning for {MY_USER_ID}")
+        logger.info(f"Sending morning planning to {MY_USER_ID}")
         text, blocks = morning_planning_message()
         send_dm(MY_USER_ID, text, blocks)
+        logger.info("Morning planning sent successfully")
+    else:
+        logger.error("MY_USER_ID not set - cannot send morning planning")
 
 
 # ============================================
@@ -328,6 +332,11 @@ def handle_message(event, say):
     elif text in ["read", "article", "reading"]:
         title, url, description = articles.get_daily_article()
         say(articles.format_article_block(title, url, description))
+
+    # --- TEST SCHEDULER (debug) ---
+    elif text == "testmorning":
+        trigger_morning_planning()
+        say(":gear: Manually triggered morning planning.")
 
     # --- HELP ---
     elif text in ["help", "?", "commands"]:

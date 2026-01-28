@@ -36,7 +36,7 @@ app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 # User config
 MY_USER_ID = os.environ.get("MY_USER_ID")
-MORNING_TIME = os.environ.get("MORNING_TIME", "11:00")
+MORNING_TIME = os.environ.get("MORNING_TIME", "12:20")
 TIMEZONE = os.environ.get("TIMEZONE", "Asia/Karachi")
 
 # Debug: log config on import
@@ -421,7 +421,7 @@ def setup_scheduler():
     hour, minute = MORNING_TIME.split(":")
     scheduler.add_job(
         trigger_morning_planning,
-        CronTrigger(hour=int(hour), minute=int(minute)),
+        CronTrigger(hour=int(hour), minute=int(minute), timezone=tz),  # explicit timezone
         id="morning_planning",
         replace_existing=True,
         misfire_grace_time=300  # 5 min grace period if job missed

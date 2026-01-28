@@ -36,8 +36,11 @@ app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 # User config
 MY_USER_ID = os.environ.get("MY_USER_ID")
-MORNING_TIME = os.environ.get("MORNING_TIME", "12:05")
+MORNING_TIME = os.environ.get("MORNING_TIME", "11:00")
 TIMEZONE = os.environ.get("TIMEZONE", "Asia/Karachi")
+
+# Debug: log config on import
+print(f"[CONFIG] MORNING_TIME={MORNING_TIME}, TIMEZONE={TIMEZONE}")
 
 
 # ============================================

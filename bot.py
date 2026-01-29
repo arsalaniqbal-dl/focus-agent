@@ -130,6 +130,44 @@ def api_delete_task(task_id):
     return jsonify({"error": "Task not found"}), 404
 
 
+@api.route("/api/article", methods=["GET"])
+@require_auth
+def api_get_article():
+    """Get today's recommended article."""
+    title, url, description = articles.get_daily_article()
+    return jsonify({
+        "title": title,
+        "url": url,
+        "description": description
+    })
+
+
+@api.route("/api/stats", methods=["GET"])
+@require_auth
+def api_get_stats():
+    """Get task stats including completed today count."""
+    conn = db.get_connection()
+    cursor = conn.cursor()
+
+    # Get pending count
+    cursor.execute("SELECT COUNT(*) FROM tasks WHERE status = 'pending'")
+    pending = cursor.fetchone()[0]
+
+    # Get completed today count
+    today = datetime.now().strftime('%Y-%m-%d')
+    cursor.execute(
+        "SELECT COUNT(*) FROM tasks WHERE status = 'completed' AND DATE(completed_at) = ?",
+        (today,)
+    )
+    completed_today = cursor.fetchone()[0]
+
+    conn.close()
+    return jsonify({
+        "pending": pending,
+        "completed_today": completed_today
+    })
+
+
 def run_api():
     """Run the Flask API server in a separate thread."""
     api.run(host="0.0.0.0", port=API_PORT, threaded=True, use_reloader=False)

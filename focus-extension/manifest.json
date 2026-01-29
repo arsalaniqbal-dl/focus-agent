@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "FocusPrompter",
+  "description": "Quick access to your tasks from new tab",
+  "version": "1.0.0",
+
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+
+  "permissions": [
+    "storage"
+  ],
+
+  "host_permissions": [
+    "https://*.railway.app/*",
+    "http://localhost:*/*"
+  ],
+
+  "options_page": "settings.html",
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FocusPrompter Settings</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eaeaea;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .settings-container {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 32px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 24px;
+      color: #fff;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #a0a0a0;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      background: #0f3460;
+      color: #eaeaea;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #e94560;
+    }
+
+    input::placeholder {
+      color: #666;
+    }
+
+    .help-text {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    button[type="submit"] {
+      background: #e94560;
+      color: #fff;
+    }
+
+    button[type="submit"]:hover {
+      background: #ff6b6b;
+    }
+
+    button[type="button"] {
+      background: #2a2a4a;
+      color: #eaeaea;
+    }
+
+    button[type="button"]:hover {
+      background: #3a3a5a;
+    }
+
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .status-success {
+      background: rgba(78, 204, 163, 0.2);
+      color: #4ecca3;
+    }
+
+    .status-error {
+      background: rgba(233, 69, 96, 0.2);
+      color: #e94560;
+    }
+
+    .status-info {
+      background: rgba(100, 116, 139, 0.2);
+      color: #94a3b8;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="settings-container">
+    <h1>FocusPrompter Settings</h1>
+
+    <form id="settings-form">
+      <div class="form-group">
+        <label for="api-url">API URL</label>
+        <input
+          type="url"
+          id="api-url"
+          placeholder="https://your-app.railway.app"
+          required
+        >
+        <p class="help-text">Your Railway app URL (no trailing slash)</p>
+      </div>
+
+      <div class="form-group">
+        <label for="api-token">API Token</label>
+        <input
+          type="password"
+          id="api-token"
+          placeholder="Your secret token"
+          required
+        >
+        <p class="help-text">Same as API_TOKEN in your Railway environment</p>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" id="test-connection">Test Connection</button>
+        <button type="submit">Save</button>
+      </div>
+
+      <div id="connection-status" class="status hidden"></div>
+    </form>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/settings.js"></script>
+</body>
+</html>

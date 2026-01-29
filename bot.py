@@ -13,12 +13,16 @@ Usage:
 """
 import os
 import logging
+import threading
+from functools import wraps
 from datetime import datetime
 from dotenv import load_dotenv
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import pytz
 
 import db
@@ -41,6 +45,94 @@ TIMEZONE = os.environ.get("TIMEZONE", "Asia/Karachi")
 
 # Debug: log config on import
 print(f"[CONFIG] MORNING_TIME={MORNING_TIME}, TIMEZONE={TIMEZONE}")
+
+# ============================================
+# HTTP API for Chrome Extension
+# ============================================
+
+api = Flask(__name__)
+CORS(api, resources={
+    r"/api/*": {
+        "origins": ["chrome-extension://*", "http://localhost:*"],
+        "methods": ["GET", "POST", "DELETE", "OPTIONS"],
+        "allow_headers": ["Authorization", "Content-Type"]
+    }
+})
+
+API_TOKEN = os.environ.get("API_TOKEN")
+API_PORT = int(os.environ.get("API_PORT", os.environ.get("PORT", 8080)))
+
+
+def require_auth(f):
+    """Decorator to require API token authentication."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        if not token or token != API_TOKEN:
+            return jsonify({"error": "Unauthorized"}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+@api.route("/api/health", methods=["GET"])
+def api_health():
+    """Health check endpoint."""
+    return jsonify({"status": "ok", "timestamp": datetime.now().isoformat()})
+
+
+@api.route("/api/tasks", methods=["GET"])
+@require_auth
+def api_get_tasks():
+    """Get all pending tasks."""
+    tasks = db.get_pending_tasks()
+    return jsonify({"tasks": tasks})
+
+
+@api.route("/api/tasks", methods=["POST"])
+@require_auth
+def api_add_task():
+    """Add a new task."""
+    data = request.json or {}
+    text = data.get("text", "").strip()
+    area = data.get("area", "work")
+
+    if not text:
+        return jsonify({"error": "Task text required"}), 400
+
+    if area not in ["work", "side_project"]:
+        area = "work"
+
+    task_id = db.add_task(text, area)
+    return jsonify({
+        "id": task_id,
+        "text": text,
+        "area": area,
+        "status": "pending",
+        "carryover_count": 0
+    }), 201
+
+
+@api.route("/api/tasks/<int:task_id>/complete", methods=["POST"])
+@require_auth
+def api_complete_task(task_id):
+    """Mark a task as completed."""
+    if db.complete_task(task_id):
+        return jsonify({"success": True})
+    return jsonify({"error": "Task not found"}), 404
+
+
+@api.route("/api/tasks/<int:task_id>", methods=["DELETE"])
+@require_auth
+def api_delete_task(task_id):
+    """Delete a task."""
+    if db.delete_task(task_id):
+        return jsonify({"success": True})
+    return jsonify({"error": "Task not found"}), 404
+
+
+def run_api():
+    """Run the Flask API server in a separate thread."""
+    api.run(host="0.0.0.0", port=API_PORT, threaded=True, use_reloader=False)
 
 
 # ============================================
@@ -455,6 +547,14 @@ if __name__ == "__main__":
     if not MY_USER_ID:
         print("Warning: MY_USER_ID not set. Scheduled morning messages won't work.")
 
+    # Start HTTP API server in background thread (for Chrome extension)
+    if API_TOKEN:
+        api_thread = threading.Thread(target=run_api, daemon=True)
+        api_thread.start()
+        logger.info(f"API server started on port {API_PORT}")
+    else:
+        logger.warning("API_TOKEN not set - HTTP API disabled")
+
     # Start scheduler
     scheduler = setup_scheduler()
 
@@ -465,6 +565,7 @@ if __name__ == "__main__":
     ================================
     Morning planning: {MORNING_TIME} {TIMEZONE}
     User ID: {MY_USER_ID or 'Not set'}
+    API: {'Enabled on port ' + str(API_PORT) if API_TOKEN else 'Disabled (set API_TOKEN)'}
 
     DM the bot in Slack to get started.
     Type 'help' for commands.

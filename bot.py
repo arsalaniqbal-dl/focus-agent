@@ -115,10 +115,29 @@ def api_add_task():
 @api.route("/api/tasks/<int:task_id>/complete", methods=["POST"])
 @require_auth
 def api_complete_task(task_id):
-    """Mark a task as completed."""
+    """Mark a task as completed and notify via Slack."""
+    # Get task details before completing
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
+    task = cursor.fetchone()
+    conn.close()
+
+    if not task:
+        return jsonify({"error": "Task not found"}), 404
+
+    task_text = task["text"]
+
     if db.complete_task(task_id):
-        return jsonify({"success": True})
-    return jsonify({"error": "Task not found"}), 404
+        # Send Slack notification
+        if MY_USER_ID:
+            try:
+                send_dm(MY_USER_ID, f":white_check_mark: *Completed from extension:*\n_{task_text}_")
+            except Exception as e:
+                logger.error(f"Failed to send completion notification: {e}")
+
+        return jsonify({"success": True, "text": task_text})
+    return jsonify({"error": "Failed to complete task"}), 500
 
 
 @api.route("/api/tasks/<int:task_id>", methods=["DELETE"])

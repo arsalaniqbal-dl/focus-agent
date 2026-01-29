@@ -1,10 +1,9 @@
 /**
- * FocusPrompter New Tab Application
+ * FocusPrompter New Tab Application - Modern Edition
  */
 
 // State
 let tasks = [];
-let currentFilter = 'all';
 let selectedTaskIndex = -1;
 
 // DOM Elements
@@ -17,8 +16,6 @@ const taskList = document.getElementById('task-list');
 const taskCount = document.getElementById('task-count');
 const emptyState = document.getElementById('empty-state');
 const taskInput = document.getElementById('task-input');
-const areaSelect = document.getElementById('area-select');
-const filterTabs = document.getElementById('filter-tabs');
 const currentTimeEl = document.getElementById('current-time');
 const greetingTextEl = document.getElementById('greeting-text');
 const pendingCountEl = document.getElementById('pending-count');
@@ -27,6 +24,8 @@ const readingCard = document.getElementById('reading-card');
 const readingLink = document.getElementById('reading-link');
 const readingDesc = document.getElementById('reading-desc');
 const keyboardHints = document.getElementById('keyboard-hints');
+const gradientBg = document.getElementById('gradient-bg');
+const gradientPicker = document.getElementById('gradient-picker');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
@@ -37,10 +36,16 @@ async function init() {
   document.getElementById('open-settings')?.addEventListener('click', openSettings);
   document.getElementById('add-task-form').addEventListener('submit', handleAddTask);
   document.getElementById('retry-btn').addEventListener('click', loadTasks);
-  filterTabs.addEventListener('click', handleFilterClick);
 
   // Keyboard shortcuts
   document.addEventListener('keydown', handleKeyboardShortcuts);
+
+  // Gradient picker
+  gradientPicker?.addEventListener('click', handleGradientClick);
+
+  // Load saved gradient
+  const savedGradient = await Storage.getGradient();
+  setGradient(savedGradient);
 
   // Start clock
   updateClock();
@@ -55,6 +60,26 @@ async function init() {
   }
 
   loadData();
+}
+
+// Gradient Management
+function handleGradientClick(e) {
+  const button = e.target.closest('button[data-gradient]');
+  if (!button) return;
+
+  const gradient = button.dataset.gradient;
+  setGradient(gradient);
+  Storage.saveGradient(gradient);
+}
+
+function setGradient(gradient) {
+  // Update background
+  gradientBg.className = `gradient-bg ${gradient}`;
+
+  // Update picker buttons
+  gradientPicker?.querySelectorAll('button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.gradient === gradient);
+  });
 }
 
 // Clock and Greeting
@@ -88,6 +113,7 @@ function showLoading() {
   errorEl.classList.add('hidden');
   loadingEl.classList.remove('hidden');
   keyboardHints?.classList.add('hidden');
+  gradientPicker?.classList.add('hidden');
 }
 
 function showMainContent() {
@@ -96,6 +122,7 @@ function showMainContent() {
   errorEl.classList.add('hidden');
   mainContent.classList.remove('hidden');
   keyboardHints?.classList.remove('hidden');
+  gradientPicker?.classList.remove('hidden');
   taskInput.focus();
 }
 
@@ -104,6 +131,7 @@ function showSetupBanner() {
   mainContent.classList.add('hidden');
   errorEl.classList.add('hidden');
   keyboardHints?.classList.add('hidden');
+  gradientPicker?.classList.add('hidden');
   setupBanner.classList.remove('hidden');
 }
 
@@ -112,6 +140,7 @@ function showError(message) {
   loadingEl.classList.add('hidden');
   mainContent.classList.add('hidden');
   keyboardHints?.classList.add('hidden');
+  gradientPicker?.classList.add('hidden');
   errorMessage.textContent = message;
   errorEl.classList.remove('hidden');
 }
@@ -166,14 +195,13 @@ async function loadTasks() {
 
 // Task Rendering
 function renderTasks() {
-  const filteredTasks = filterTasks(tasks, currentFilter);
-
   taskList.innerHTML = '';
   selectedTaskIndex = -1;
 
-  if (filteredTasks.length === 0) {
+  if (tasks.length === 0) {
     emptyState.classList.remove('hidden');
     taskCount.textContent = '0';
+    pendingCountEl.textContent = '0';
     return;
   }
 
@@ -181,15 +209,10 @@ function renderTasks() {
   taskCount.textContent = tasks.length;
   pendingCountEl.textContent = tasks.length;
 
-  filteredTasks.forEach((task, index) => {
+  tasks.forEach((task, index) => {
     const li = createTaskElement(task, index);
     taskList.appendChild(li);
   });
-}
-
-function filterTasks(tasks, filter) {
-  if (filter === 'all') return tasks;
-  return tasks.filter(t => t.area === filter);
 }
 
 function createTaskElement(task, index) {
@@ -198,14 +221,9 @@ function createTaskElement(task, index) {
   if (task._pending) li.classList.add('_pending');
   li.dataset.id = task.id;
   li.dataset.index = index;
-  li.dataset.area = task.area;
 
   const carryoverHtml = task.carryover_count > 0
     ? `<span class="carryover ${task.carryover_count >= 3 ? 'warning' : ''}">day ${task.carryover_count + 1}</span>`
-    : '';
-
-  const areaHtml = task.area === 'side_project'
-    ? '<span class="area-tag">side</span>'
     : '';
 
   li.innerHTML = `
@@ -215,7 +233,6 @@ function createTaskElement(task, index) {
     <span class="task-text">${escapeHtml(task.text)}</span>
     <span class="task-meta">
       ${carryoverHtml}
-      ${areaHtml}
     </span>
     <button class="delete-btn" aria-label="Delete task">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -249,8 +266,6 @@ function handleKeyboardShortcuts(e) {
     return;
   }
 
-  const filteredTasks = filterTasks(tasks, currentFilter);
-
   switch (e.key) {
     case '/':
       e.preventDefault();
@@ -259,15 +274,15 @@ function handleKeyboardShortcuts(e) {
 
     case 'j': // Move down
       e.preventDefault();
-      if (filteredTasks.length > 0) {
-        selectedTaskIndex = Math.min(selectedTaskIndex + 1, filteredTasks.length - 1);
+      if (tasks.length > 0) {
+        selectedTaskIndex = Math.min(selectedTaskIndex + 1, tasks.length - 1);
         updateSelectedTask();
       }
       break;
 
     case 'k': // Move up
       e.preventDefault();
-      if (filteredTasks.length > 0) {
+      if (tasks.length > 0) {
         selectedTaskIndex = Math.max(selectedTaskIndex - 1, 0);
         updateSelectedTask();
       }
@@ -275,16 +290,16 @@ function handleKeyboardShortcuts(e) {
 
     case 'x': // Complete selected
       e.preventDefault();
-      if (selectedTaskIndex >= 0 && selectedTaskIndex < filteredTasks.length) {
-        const task = filteredTasks[selectedTaskIndex];
+      if (selectedTaskIndex >= 0 && selectedTaskIndex < tasks.length) {
+        const task = tasks[selectedTaskIndex];
         handleCompleteTask(task.id);
       }
       break;
 
     case 'd': // Delete selected
       e.preventDefault();
-      if (selectedTaskIndex >= 0 && selectedTaskIndex < filteredTasks.length) {
-        const task = filteredTasks[selectedTaskIndex];
+      if (selectedTaskIndex >= 0 && selectedTaskIndex < tasks.length) {
+        const task = tasks[selectedTaskIndex];
         handleDeleteTask(task.id);
       }
       break;
@@ -317,7 +332,6 @@ async function handleAddTask(e) {
   e.preventDefault();
 
   const text = taskInput.value.trim();
-  const area = areaSelect.value;
 
   if (!text) return;
 
@@ -326,7 +340,7 @@ async function handleAddTask(e) {
   const tempTask = {
     id: tempId,
     text,
-    area,
+    area: 'work',
     status: 'pending',
     carryover_count: 0,
     _pending: true
@@ -339,7 +353,7 @@ async function handleAddTask(e) {
   taskInput.focus();
 
   try {
-    const realTask = await API.addTask(text, area);
+    const realTask = await API.addTask(text, 'work');
 
     // Replace temp with real task
     const index = tasks.findIndex(t => t.id === tempId);
@@ -363,10 +377,17 @@ async function handleCompleteTask(taskId) {
   const taskEl = document.querySelector(`[data-id="${taskId}"]`);
   if (!taskEl) return;
 
+  // Get task text for toast
+  const task = tasks.find(t => t.id === taskId);
+  const taskText = task ? task.text : '';
+
   taskEl.classList.add('completing');
 
   try {
     await API.completeTask(taskId);
+
+    // Show success toast
+    showToast(`Completed: ${taskText.substring(0, 30)}${taskText.length > 30 ? '...' : ''}`, 'success');
 
     // Remove from local state after animation
     setTimeout(() => {
@@ -399,23 +420,6 @@ async function handleDeleteTask(taskId) {
     taskEl.classList.remove('deleting');
     showToast('Failed to delete: ' + error.message, 'error');
   }
-}
-
-// Filter Tabs
-function handleFilterClick(e) {
-  const button = e.target.closest('button[role="tab"]');
-  if (!button) return;
-
-  const filter = button.dataset.filter;
-  currentFilter = filter;
-
-  // Update tab states
-  filterTabs.querySelectorAll('button').forEach(btn => {
-    btn.setAttribute('aria-selected', btn.dataset.filter === filter);
-  });
-
-  selectedTaskIndex = -1;
-  renderTasks();
 }
 
 // Update Stats

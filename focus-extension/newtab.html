@@ -6,6 +6,9 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+  <!-- Animated Background -->
+  <div class="gradient-bg aurora" id="gradient-bg"></div>
+
   <div id="app">
     <!-- Settings Button (top right) -->
     <button id="settings-btn" aria-label="Settings">
@@ -61,23 +64,12 @@
           placeholder="Add a task... (press / to focus)"
           autocomplete="off"
         >
-        <select id="area-select">
-          <option value="work">Work</option>
-          <option value="side_project">Side</option>
-        </select>
         <button type="submit">Add</button>
       </form>
 
       <!-- Task List -->
       <section id="tasks-section">
         <h2>Tasks (<span id="task-count">0</span>)</h2>
-
-        <!-- Filter Tabs -->
-        <div id="filter-tabs" role="tablist">
-          <button role="tab" data-filter="all" aria-selected="true">All</button>
-          <button role="tab" data-filter="work" aria-selected="false">Work</button>
-          <button role="tab" data-filter="side_project" aria-selected="false">Side Projects</button>
-        </div>
 
         <!-- Task List -->
         <ul id="task-list" role="list">
@@ -101,6 +93,14 @@
     <div id="error" class="hidden">
       <p id="error-message"></p>
       <button id="retry-btn">Retry</button>
+    </div>
+
+    <!-- Gradient Picker -->
+    <div class="gradient-picker" id="gradient-picker">
+      <button data-gradient="aurora" class="active" title="Aurora"></button>
+      <button data-gradient="sunset" title="Sunset"></button>
+      <button data-gradient="ocean" title="Ocean"></button>
+      <button data-gradient="minimal" title="Minimal"></button>
     </div>
 
     <!-- Keyboard Shortcuts Hint -->

@@ -27,5 +27,19 @@ const Storage = {
 
   isConfigured() {
     return this.getConfig().then(config => !!(config.apiUrl && config.token));
+  },
+
+  async getGradient() {
+    return new Promise((resolve) => {
+      chrome.storage.sync.get(['gradient'], (result) => {
+        resolve(result.gradient || 'aurora');
+      });
+    });
+  },
+
+  async saveGradient(gradient) {
+    return new Promise((resolve) => {
+      chrome.storage.sync.set({ gradient }, resolve);
+    });
   }
 };

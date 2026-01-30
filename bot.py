@@ -353,7 +353,7 @@ def handle_message(event, say):
             # Check if it's a bulleted list (multiple tasks)
             import re
             lines = task_text.split('\n')
-            bullet_pattern = re.compile(r'^[\-\*\•]\s*(.+)$|^(\d+[\.\)]\s*)(.+)$')
+            bullet_pattern = re.compile(r'^[\-\*\•\●\○\◦\▪\▸\►\◆\→\»]\s*(.+)$|^(\d+[\.\)]\s*)(.+)$')
 
             tasks_to_add = []
             for line in lines:

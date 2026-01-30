@@ -91,7 +91,7 @@ def api_get_tasks():
 @api.route("/api/tasks", methods=["POST"])
 @require_auth
 def api_add_task():
-    """Add a new task."""
+    """Add a new task and notify via Slack."""
     data = request.json or {}
     text = data.get("text", "").strip()
     area = data.get("area", "work")
@@ -103,6 +103,14 @@ def api_add_task():
         area = "work"
 
     task_id = db.add_task(text, area)
+
+    # Send Slack notification
+    if MY_USER_ID:
+        try:
+            send_dm(MY_USER_ID, f":heavy_plus_sign: *Added from extension:*\n_{text}_")
+        except Exception as e:
+            logger.error(f"Failed to send add notification: {e}")
+
     return jsonify({
         "id": task_id,
         "text": text,

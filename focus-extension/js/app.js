@@ -18,14 +18,19 @@ const emptyState = document.getElementById('empty-state');
 const taskInput = document.getElementById('task-input');
 const currentTimeEl = document.getElementById('current-time');
 const greetingTextEl = document.getElementById('greeting-text');
-const pendingCountEl = document.getElementById('pending-count');
-const completedTodayEl = document.getElementById('completed-today');
 const readingCard = document.getElementById('reading-card');
 const readingLink = document.getElementById('reading-link');
 const readingDesc = document.getElementById('reading-desc');
 const keyboardHints = document.getElementById('keyboard-hints');
 const gradientBg = document.getElementById('gradient-bg');
 const gradientPicker = document.getElementById('gradient-picker');
+
+// Modal Elements
+const settingsModal = document.getElementById('settings-modal');
+const settingsForm = document.getElementById('settings-form');
+const apiUrlInput = document.getElementById('api-url');
+const apiTokenInput = document.getElementById('api-token');
+const connectionStatus = document.getElementById('connection-status');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
@@ -37,11 +42,20 @@ async function init() {
   document.getElementById('add-task-form').addEventListener('submit', handleAddTask);
   document.getElementById('retry-btn').addEventListener('click', loadTasks);
 
+  // Modal event listeners
+  document.getElementById('modal-close')?.addEventListener('click', closeSettings);
+  settingsModal?.addEventListener('click', handleModalBackdropClick);
+  settingsForm?.addEventListener('submit', handleSettingsSave);
+  document.getElementById('test-connection')?.addEventListener('click', handleTestConnection);
+
   // Keyboard shortcuts
   document.addEventListener('keydown', handleKeyboardShortcuts);
 
   // Gradient picker
   gradientPicker?.addEventListener('click', handleGradientClick);
+
+  // Cursor parallax for gradient background
+  document.addEventListener('mousemove', handleGradientParallax);
 
   // Load saved gradient
   const savedGradient = await Storage.getGradient();
@@ -82,6 +96,47 @@ function setGradient(gradient) {
   });
 }
 
+// Cursor parallax effect for gradient
+let parallaxTarget = { x: 0, y: 0 };
+let parallaxCurrent = { x: 0, y: 0 };
+let parallaxAnimating = false;
+
+function handleGradientParallax(e) {
+  // Calculate offset from center (-1 to 1)
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
+
+  // Subtle movement - max 3% offset
+  parallaxTarget.x = ((e.clientX - centerX) / centerX) * 3;
+  parallaxTarget.y = ((e.clientY - centerY) / centerY) * 3;
+
+  if (!parallaxAnimating) {
+    parallaxAnimating = true;
+    animateParallax();
+  }
+}
+
+function animateParallax() {
+  // Smooth interpolation (ease towards target)
+  const ease = 0.08;
+  parallaxCurrent.x += (parallaxTarget.x - parallaxCurrent.x) * ease;
+  parallaxCurrent.y += (parallaxTarget.y - parallaxCurrent.y) * ease;
+
+  // Apply the offset via CSS custom properties
+  gradientBg.style.setProperty('--parallax-x', `${parallaxCurrent.x}%`);
+  gradientBg.style.setProperty('--parallax-y', `${parallaxCurrent.y}%`);
+
+  // Continue animation if not close enough to target
+  const dx = Math.abs(parallaxTarget.x - parallaxCurrent.x);
+  const dy = Math.abs(parallaxTarget.y - parallaxCurrent.y);
+
+  if (dx > 0.01 || dy > 0.01) {
+    requestAnimationFrame(animateParallax);
+  } else {
+    parallaxAnimating = false;
+  }
+}
+
 // Clock and Greeting
 function updateClock() {
   const now = new Date();
@@ -102,8 +157,86 @@ function getGreeting(hour) {
   return "Working late? Rest soon.";
 }
 
-function openSettings() {
-  chrome.runtime.openOptionsPage();
+// Settings Modal
+async function openSettings() {
+  // Load current config into form
+  const config = await Storage.getConfig();
+  apiUrlInput.value = config.apiUrl;
+  apiTokenInput.value = config.token;
+  connectionStatus.classList.add('hidden');
+
+  // Show modal
+  settingsModal.classList.remove('hidden');
+  // Trigger animation after a frame
+  requestAnimationFrame(() => {
+    settingsModal.classList.add('visible');
+  });
+  apiUrlInput.focus();
+}
+
+function closeSettings() {
+  settingsModal.classList.remove('visible');
+  // Wait for animation to complete before hiding
+  setTimeout(() => {
+    settingsModal.classList.add('hidden');
+  }, 300);
+}
+
+function handleModalBackdropClick(e) {
+  // Close if clicking the backdrop (not the modal content)
+  if (e.target === settingsModal) {
+    closeSettings();
+  }
+}
+
+async function handleSettingsSave(e) {
+  e.preventDefault();
+
+  const apiUrl = apiUrlInput.value.trim().replace(/\/$/, '');
+  const token = apiTokenInput.value.trim();
+
+  await Storage.saveConfig(apiUrl, token);
+  showSettingsStatus('Settings saved!', 'success');
+
+  // Close modal and reload data after a brief delay
+  setTimeout(() => {
+    closeSettings();
+    loadData();
+  }, 800);
+}
+
+async function handleTestConnection() {
+  const apiUrl = apiUrlInput.value.trim().replace(/\/$/, '');
+  const token = apiTokenInput.value.trim();
+
+  if (!apiUrl || !token) {
+    showSettingsStatus('Please enter both URL and token', 'error');
+    return;
+  }
+
+  showSettingsStatus('Testing connection...', 'info');
+
+  try {
+    const response = await fetch(`${apiUrl}/api/health`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (response.ok) {
+      showSettingsStatus('Connection successful!', 'success');
+    } else if (response.status === 401) {
+      showSettingsStatus('Invalid token', 'error');
+    } else {
+      showSettingsStatus(`Connection failed: ${response.status}`, 'error');
+    }
+  } catch (error) {
+    showSettingsStatus('Could not reach server', 'error');
+  }
+}
+
+function showSettingsStatus(message, type) {
+  connectionStatus.textContent = message;
+  connectionStatus.className = `status status-${type}`;
+  connectionStatus.classList.remove('hidden');
 }
 
 // UI State Management
@@ -150,24 +283,14 @@ async function loadData() {
   showLoading();
 
   try {
-    // Load tasks, stats, and article in parallel
-    const [tasksData, statsData, articleData] = await Promise.all([
+    // Load tasks and article in parallel
+    const [tasksData, articleData] = await Promise.all([
       API.getTasks(),
-      API.getStats().catch(() => null),
       API.getArticle().catch(() => null)
     ]);
 
     tasks = tasksData;
     renderTasks();
-
-    // Update stats
-    if (statsData) {
-      pendingCountEl.textContent = statsData.pending;
-      completedTodayEl.textContent = statsData.completed_today;
-    } else {
-      pendingCountEl.textContent = tasks.length;
-      completedTodayEl.textContent = '0';
-    }
 
     // Update reading card
     if (articleData) {
@@ -201,13 +324,11 @@ function renderTasks() {
   if (tasks.length === 0) {
     emptyState.classList.remove('hidden');
     taskCount.textContent = '0';
-    pendingCountEl.textContent = '0';
     return;
   }
 
   emptyState.classList.add('hidden');
   taskCount.textContent = tasks.length;
-  pendingCountEl.textContent = tasks.length;
 
   tasks.forEach((task, index) => {
     const li = createTaskElement(task, index);
@@ -256,6 +377,13 @@ function escapeHtml(text) {
 
 // Keyboard Navigation
 function handleKeyboardShortcuts(e) {
+  // Close modal on Escape if open
+  if (e.key === 'Escape' && settingsModal && !settingsModal.classList.contains('hidden')) {
+    e.preventDefault();
+    closeSettings();
+    return;
+  }
+
   // Ignore if typing in input
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
     if (e.key === 'Escape') {
@@ -361,9 +489,6 @@ async function handleAddTask(e) {
       tasks[index] = realTask;
       renderTasks();
     }
-
-    // Update stats
-    updateStats();
   } catch (error) {
     // Remove temp task on failure
     tasks = tasks.filter(t => t.id !== tempId);
@@ -372,33 +497,28 @@ async function handleAddTask(e) {
   }
 }
 
-// Complete Task (Optimistic Update)
-async function handleCompleteTask(taskId) {
+// Complete Task (Optimistic, non-blocking)
+function handleCompleteTask(taskId) {
   const taskEl = document.querySelector(`[data-id="${taskId}"]`);
-  if (!taskEl) return;
+  if (!taskEl || taskEl.classList.contains('completing')) return;
 
-  // Get task text for toast
-  const task = tasks.find(t => t.id === taskId);
-  const taskText = task ? task.text : '';
+  // Celebrate immediately - confetti across the screen!
+  celebrate();
 
+  // Start smooth fade out
   taskEl.classList.add('completing');
 
-  try {
-    await API.completeTask(taskId);
+  // Remove from local state after animation completes
+  setTimeout(() => {
+    tasks = tasks.filter(t => t.id !== taskId);
+    renderTasks();
+  }, 400);
 
-    // Show success toast
-    showToast(`Completed: ${taskText.substring(0, 30)}${taskText.length > 30 ? '...' : ''}`, 'success');
-
-    // Remove from local state after animation
-    setTimeout(() => {
-      tasks = tasks.filter(t => t.id !== taskId);
-      renderTasks();
-      updateStats();
-    }, 300);
-  } catch (error) {
-    taskEl.classList.remove('completing');
-    showToast('Failed to complete: ' + error.message, 'error');
-  }
+  // Fire API call in background - don't wait
+  API.completeTask(taskId).catch(error => {
+    console.error('Failed to sync completion:', error);
+    // Silent fail - task already removed from UI
+  });
 }
 
 // Delete Task
@@ -414,7 +534,6 @@ async function handleDeleteTask(taskId) {
     setTimeout(() => {
       tasks = tasks.filter(t => t.id !== taskId);
       renderTasks();
-      updateStats();
     }, 200);
   } catch (error) {
     taskEl.classList.remove('deleting');
@@ -422,16 +541,45 @@ async function handleDeleteTask(taskId) {
   }
 }
 
-// Update Stats
-async function updateStats() {
-  try {
-    const stats = await API.getStats();
-    pendingCountEl.textContent = stats.pending;
-    completedTodayEl.textContent = stats.completed_today;
-  } catch (e) {
-    // Fallback to local count
-    pendingCountEl.textContent = tasks.length;
+// Celebration Effect - Screen-wide confetti burst from center
+function celebrate() {
+  const container = document.createElement('div');
+  container.className = 'confetti-container';
+  document.body.appendChild(container);
+
+  const colors = ['#4ecca3', '#e94560', '#ffc107', '#6366f1', '#06b6d4', '#ec4899', '#10b981'];
+  const particleCount = 40;
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
+
+  for (let i = 0; i < particleCount; i++) {
+    const confetti = document.createElement('div');
+    confetti.className = 'confetti';
+
+    // Random position across entire screen
+    const startX = Math.random() * window.innerWidth;
+    const startY = Math.random() * window.innerHeight * 0.6;
+
+    // Random movement direction
+    const moveX = (Math.random() - 0.5) * 200;
+    const moveY = 150 + Math.random() * 250;
+
+    confetti.style.cssText = `
+      left: ${startX}px;
+      top: ${startY}px;
+      width: ${6 + Math.random() * 8}px;
+      height: ${6 + Math.random() * 8}px;
+      background-color: ${colors[Math.floor(Math.random() * colors.length)]};
+      --move-x: ${moveX}px;
+      --move-y: ${moveY}px;
+      animation-delay: ${Math.random() * 0.5}s;
+      animation-duration: ${2 + Math.random() * 0.5}s;
+    `;
+
+    container.appendChild(confetti);
   }
+
+  setTimeout(() => container.remove(), 3000);
 }
 
 // Toast Notifications

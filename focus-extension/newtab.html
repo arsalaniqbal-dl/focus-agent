@@ -32,18 +32,6 @@
 
     <!-- Main Content -->
     <main id="main-content" class="hidden">
-      <!-- Stats Bar -->
-      <div class="stats-bar">
-        <div class="stat-item">
-          <div class="stat-value" id="pending-count">0</div>
-          <div class="stat-label">Pending</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value completed" id="completed-today">0</div>
-          <div class="stat-label">Done Today</div>
-        </div>
-      </div>
-
       <!-- Daily Reading Card -->
       <div class="reading-card" id="reading-card">
         <div class="reading-label">
@@ -108,6 +96,45 @@
       <span><kbd>/</kbd> add task</span>
       <span><kbd>j</kbd><kbd>k</kbd> navigate</span>
       <span><kbd>x</kbd> complete</span>
+    </div>
+
+    <!-- Settings Modal Overlay -->
+    <div id="settings-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close" aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <h2>Settings</h2>
+        <form id="settings-form">
+          <div class="form-group">
+            <label for="api-url">API URL</label>
+            <input
+              type="url"
+              id="api-url"
+              placeholder="https://your-app.railway.app"
+              required
+            >
+            <p class="help-text">Your Railway app URL (no trailing slash)</p>
+          </div>
+          <div class="form-group">
+            <label for="api-token">API Token</label>
+            <input
+              type="password"
+              id="api-token"
+              placeholder="Your secret token"
+              required
+            >
+            <p class="help-text">Same as API_TOKEN in your Railway environment</p>
+          </div>
+          <div class="form-actions">
+            <button type="button" id="test-connection">Test</button>
+            <button type="submit">Save</button>
+          </div>
+          <div id="connection-status" class="status hidden"></div>
+        </form>
+      </div>
     </div>
   </div>
 

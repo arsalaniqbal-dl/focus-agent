@@ -347,8 +347,8 @@ def handle_message(event, say):
     original_text = event.get("text", "").strip()
 
     # --- ADD TASK (single or bulleted list) ---
-    if text.startswith("add "):
-        task_text = original_text[4:].strip()
+    if text.startswith("add ") or text.startswith("add\n"):
+        task_text = original_text[3:].strip()  # Skip "add", then strip whitespace/newlines
         if task_text:
             # Check if it's a bulleted list (multiple tasks)
             import re

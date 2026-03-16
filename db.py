@@ -107,6 +107,19 @@ def init_db():
 
 # --- Task Operations ---
 
+def get_task(task_id: int) -> Optional[dict]:
+    """Get a single task by ID."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        f"SELECT * FROM tasks WHERE id = {_param}",
+        (task_id,)
+    )
+    row = _fetchone(cursor)
+    conn.close()
+    return row
+
+
 def add_task(text: str, area: str = "work") -> int:
     """Add a new task. Returns the task ID."""
     conn = get_connection()

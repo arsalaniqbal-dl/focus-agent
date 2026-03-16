@@ -125,11 +125,7 @@ def api_add_task():
 def api_complete_task(task_id):
     """Mark a task as completed and notify via Slack."""
     # Get task details before completing
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
-    task = cursor.fetchone()
-    conn.close()
+    task = db.get_task(task_id)
 
     if not task:
         return jsonify({"error": "Task not found"}), 404
@@ -169,26 +165,37 @@ def api_get_article():
     })
 
 
+@api.route("/api/article/refresh", methods=["POST"])
+@require_auth
+def api_refresh_article():
+    """Get a random article, excluding recently seen ones."""
+    data = request.get_json(silent=True) or {}
+    exclude_titles = data.get("exclude", [])
+    title, url, description = articles.get_random_article_excluding(exclude_titles)
+    return jsonify({
+        "title": title,
+        "url": url,
+        "description": description
+    })
+
+
 @api.route("/api/stats", methods=["GET"])
 @require_auth
 def api_get_stats():
     """Get task stats including completed today count."""
+    pending = len(db.get_pending_tasks())
+    today = datetime.now().strftime('%Y-%m-%d')
+
     conn = db.get_connection()
     cursor = conn.cursor()
-
-    # Get pending count
-    cursor.execute("SELECT COUNT(*) FROM tasks WHERE status = 'pending'")
-    pending = cursor.fetchone()[0]
-
-    # Get completed today count
-    today = datetime.now().strftime('%Y-%m-%d')
+    param = "%s" if db.DB_HOST else "?"
     cursor.execute(
-        "SELECT COUNT(*) FROM tasks WHERE status = 'completed' AND DATE(completed_at) = ?",
+        f"SELECT COUNT(*) FROM tasks WHERE status = 'completed' AND DATE(completed_at) = {param}",
         (today,)
     )
     completed_today = cursor.fetchone()[0]
-
     conn.close()
+
     return jsonify({
         "pending": pending,
         "completed_today": completed_today

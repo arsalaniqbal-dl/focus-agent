@@ -41,6 +41,7 @@ async function init() {
   document.getElementById('open-settings')?.addEventListener('click', openSettings);
   document.getElementById('add-task-form').addEventListener('submit', handleAddTask);
   document.getElementById('retry-btn').addEventListener('click', loadTasks);
+  document.getElementById('refresh-article')?.addEventListener('click', handleRefreshArticle);
 
   // Modal event listeners
   document.getElementById('modal-close')?.addEventListener('click', closeSettings);
@@ -297,6 +298,8 @@ async function loadData() {
       readingLink.href = articleData.url;
       readingLink.textContent = articleData.title;
       readingDesc.textContent = articleData.description;
+      await loadSeenArticles();
+      trackArticle(articleData.title);
     } else {
       readingCard.classList.add('hidden');
     }
@@ -314,6 +317,52 @@ async function loadData() {
 
 async function loadTasks() {
   loadData();
+}
+
+// Article Refresh
+let seenArticles = [];
+
+async function loadSeenArticles() {
+  return new Promise(resolve => {
+    chrome.storage.local.get(['seenArticles'], (result) => {
+      seenArticles = result.seenArticles || [];
+      resolve();
+    });
+  });
+}
+
+function trackArticle(title) {
+  if (!seenArticles.includes(title)) {
+    seenArticles.push(title);
+    // Keep last 50 to avoid filling storage
+    if (seenArticles.length > 50) seenArticles = seenArticles.slice(-50);
+    chrome.storage.local.set({ seenArticles });
+  }
+}
+
+async function handleRefreshArticle(e) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const btn = document.getElementById('refresh-article');
+  if (btn.classList.contains('loading')) return;
+
+  btn.classList.add('loading');
+  await loadSeenArticles();
+
+  try {
+    const articleData = await API.refreshArticle(seenArticles);
+    if (articleData) {
+      readingLink.href = articleData.url;
+      readingLink.textContent = articleData.title;
+      readingDesc.textContent = articleData.description;
+      trackArticle(articleData.title);
+    }
+  } catch (error) {
+    showToast('Failed to refresh article', 'error');
+  } finally {
+    btn.classList.remove('loading');
+  }
 }
 
 // Task Rendering
@@ -343,18 +392,11 @@ function createTaskElement(task, index) {
   li.dataset.id = task.id;
   li.dataset.index = index;
 
-  const carryoverHtml = task.carryover_count > 0
-    ? `<span class="carryover ${task.carryover_count >= 3 ? 'warning' : ''}">day ${task.carryover_count + 1}</span>`
-    : '';
-
   li.innerHTML = `
     <button class="checkbox" aria-label="Mark complete">
       <span class="check-icon"></span>
     </button>
     <span class="task-text">${escapeHtml(task.text)}</span>
-    <span class="task-meta">
-      ${carryoverHtml}
-    </span>
     <button class="delete-btn" aria-label="Delete task">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -384,9 +426,10 @@ function handleKeyboardShortcuts(e) {
     return;
   }
 
-  // Ignore if typing in input
+  // Handle keys while in input field
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' || e.key === 'ArrowDown') {
+      e.preventDefault();
       e.target.blur();
       selectedTaskIndex = -1;
       updateSelectedTask();
@@ -400,7 +443,7 @@ function handleKeyboardShortcuts(e) {
       taskInput.focus();
       break;
 
-    case 'j': // Move down
+    case 'ArrowDown': // Move down
       e.preventDefault();
       if (tasks.length > 0) {
         selectedTaskIndex = Math.min(selectedTaskIndex + 1, tasks.length - 1);
@@ -408,10 +451,15 @@ function handleKeyboardShortcuts(e) {
       }
       break;
 
-    case 'k': // Move up
+    case 'ArrowUp': // Move up
       e.preventDefault();
-      if (tasks.length > 0) {
-        selectedTaskIndex = Math.max(selectedTaskIndex - 1, 0);
+      if (selectedTaskIndex <= 0) {
+        // At first task or no selection - focus input
+        selectedTaskIndex = -1;
+        updateSelectedTask();
+        taskInput.focus();
+      } else if (tasks.length > 0) {
+        selectedTaskIndex = selectedTaskIndex - 1;
         updateSelectedTask();
       }
       break;

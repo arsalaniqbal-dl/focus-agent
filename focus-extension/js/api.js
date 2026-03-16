@@ -61,6 +61,10 @@ const API = {
     return this.request('GET', '/api/article');
   },
 
+  async refreshArticle(excludeTitles = []) {
+    return this.request('POST', '/api/article/refresh', { exclude: excludeTitles });
+  },
+
   async getStats() {
     return this.request('GET', '/api/stats');
   }

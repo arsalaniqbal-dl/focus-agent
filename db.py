@@ -11,9 +11,19 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL:
     import psycopg2
     import psycopg2.extras
+    from urllib.parse import urlparse, quote_plus, urlunparse
+
+    # URL-encode the password to handle special characters (#, %, ! etc.)
+    _parsed = urlparse(DATABASE_URL)
+    if _parsed.password:
+        _encoded_url = urlunparse(_parsed._replace(
+            netloc=f"{_parsed.username}:{quote_plus(_parsed.password)}@{_parsed.hostname}:{_parsed.port}"
+        ))
+    else:
+        _encoded_url = DATABASE_URL
 
     def get_connection():
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(_encoded_url)
         return conn
 
     def _fetchall(cursor):

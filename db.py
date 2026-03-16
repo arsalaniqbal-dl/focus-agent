@@ -1,18 +1,50 @@
 """
-Simple SQLite storage for tasks and daily plans.
+PostgreSQL storage for tasks and daily plans (Supabase-hosted).
+Falls back to SQLite if DATABASE_URL is not set (local dev).
 """
-import sqlite3
-from datetime import datetime, date
-from pathlib import Path
+import os
+from datetime import datetime, date, timedelta
 from typing import Optional
 
-DB_PATH = Path(__file__).parent / "focus.db"
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
+if DATABASE_URL:
+    import psycopg2
+    import psycopg2.extras
 
-def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    def get_connection():
+        conn = psycopg2.connect(DATABASE_URL)
+        return conn
+
+    def _fetchall(cursor):
+        columns = [desc[0] for desc in cursor.description]
+        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    def _fetchone(cursor):
+        columns = [desc[0] for desc in cursor.description]
+        row = cursor.fetchone()
+        return dict(zip(columns, row)) if row else None
+
+    _param = "%s"
+else:
+    import sqlite3
+    from pathlib import Path
+
+    DB_PATH = Path(__file__).parent / "focus.db"
+
+    def get_connection():
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    def _fetchall(cursor):
+        return [dict(row) for row in cursor.fetchall()]
+
+    def _fetchone(cursor):
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+    _param = "?"
 
 
 def init_db():
@@ -20,27 +52,48 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            text TEXT NOT NULL,
-            area TEXT DEFAULT 'work',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            completed_at TIMESTAMP,
-            status TEXT DEFAULT 'pending',
-            carryover_count INTEGER DEFAULT 0
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS daily_plans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            plan_date DATE NOT NULL UNIQUE,
-            focus_items TEXT,
-            win_criteria TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
+    if DATABASE_URL:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tasks (
+                id SERIAL PRIMARY KEY,
+                text TEXT NOT NULL,
+                area TEXT DEFAULT 'work',
+                created_at TIMESTAMP DEFAULT NOW(),
+                completed_at TIMESTAMP,
+                status TEXT DEFAULT 'pending',
+                carryover_count INTEGER DEFAULT 0
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS daily_plans (
+                id SERIAL PRIMARY KEY,
+                plan_date DATE NOT NULL UNIQUE,
+                focus_items TEXT,
+                win_criteria TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+    else:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                text TEXT NOT NULL,
+                area TEXT DEFAULT 'work',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP,
+                status TEXT DEFAULT 'pending',
+                carryover_count INTEGER DEFAULT 0
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS daily_plans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                plan_date DATE NOT NULL UNIQUE,
+                focus_items TEXT,
+                win_criteria TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
 
     conn.commit()
     conn.close()
@@ -52,11 +105,18 @@ def add_task(text: str, area: str = "work") -> int:
     """Add a new task. Returns the task ID."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO tasks (text, area) VALUES (?, ?)",
-        (text, area)
-    )
-    task_id = cursor.lastrowid
+    if DATABASE_URL:
+        cursor.execute(
+            "INSERT INTO tasks (text, area) VALUES (%s, %s) RETURNING id",
+            (text, area)
+        )
+        task_id = cursor.fetchone()[0]
+    else:
+        cursor.execute(
+            "INSERT INTO tasks (text, area) VALUES (?, ?)",
+            (text, area)
+        )
+        task_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return task_id
@@ -67,9 +127,9 @@ def get_pending_tasks() -> list:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT * FROM tasks WHERE status = 'pending' ORDER BY created_at"
+        f"SELECT * FROM tasks WHERE status = 'pending' ORDER BY created_at"
     )
-    tasks = [dict(row) for row in cursor.fetchall()]
+    tasks = _fetchall(cursor)
     conn.close()
     return tasks
 
@@ -79,10 +139,10 @@ def get_tasks_by_area(area: str) -> list:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT * FROM tasks WHERE status = 'pending' AND area = ? ORDER BY created_at",
+        f"SELECT * FROM tasks WHERE status = 'pending' AND area = {_param} ORDER BY created_at",
         (area,)
     )
-    tasks = [dict(row) for row in cursor.fetchall()]
+    tasks = _fetchall(cursor)
     conn.close()
     return tasks
 
@@ -92,7 +152,7 @@ def complete_task(task_id: int) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE tasks SET status = 'completed', completed_at = ? WHERE id = ?",
+        f"UPDATE tasks SET status = 'completed', completed_at = {_param} WHERE id = {_param}",
         (datetime.now(), task_id)
     )
     success = cursor.rowcount > 0
@@ -105,7 +165,7 @@ def delete_task(task_id: int) -> bool:
     """Delete a task entirely."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    cursor.execute(f"DELETE FROM tasks WHERE id = {_param}", (task_id,))
     success = cursor.rowcount > 0
     conn.commit()
     conn.close()
@@ -117,7 +177,7 @@ def increment_carryover(task_id: int):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE tasks SET carryover_count = carryover_count + 1 WHERE id = ?",
+        f"UPDATE tasks SET carryover_count = carryover_count + 1 WHERE id = {_param}",
         (task_id,)
     )
     conn.commit()
@@ -129,10 +189,10 @@ def get_stuck_tasks(min_carryover: int = 3) -> list:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT * FROM tasks WHERE status = 'pending' AND carryover_count >= ?",
+        f"SELECT * FROM tasks WHERE status = 'pending' AND carryover_count >= {_param}",
         (min_carryover,)
     )
-    tasks = [dict(row) for row in cursor.fetchall()]
+    tasks = _fetchall(cursor)
     conn.close()
     return tasks
 
@@ -146,15 +206,27 @@ def save_daily_plan(focus_items: list, win_criteria: str = "") -> int:
     today = date.today().isoformat()
     focus_text = "\n".join(focus_items) if focus_items else ""
 
-    cursor.execute(
-        """INSERT INTO daily_plans (plan_date, focus_items, win_criteria)
-           VALUES (?, ?, ?)
-           ON CONFLICT(plan_date) DO UPDATE SET
-           focus_items = excluded.focus_items,
-           win_criteria = excluded.win_criteria""",
-        (today, focus_text, win_criteria)
-    )
-    plan_id = cursor.lastrowid
+    if DATABASE_URL:
+        cursor.execute(
+            """INSERT INTO daily_plans (plan_date, focus_items, win_criteria)
+               VALUES (%s, %s, %s)
+               ON CONFLICT(plan_date) DO UPDATE SET
+               focus_items = EXCLUDED.focus_items,
+               win_criteria = EXCLUDED.win_criteria
+               RETURNING id""",
+            (today, focus_text, win_criteria)
+        )
+        plan_id = cursor.fetchone()[0]
+    else:
+        cursor.execute(
+            """INSERT INTO daily_plans (plan_date, focus_items, win_criteria)
+               VALUES (?, ?, ?)
+               ON CONFLICT(plan_date) DO UPDATE SET
+               focus_items = excluded.focus_items,
+               win_criteria = excluded.win_criteria""",
+            (today, focus_text, win_criteria)
+        )
+        plan_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return plan_id
@@ -166,27 +238,26 @@ def get_today_plan() -> Optional[dict]:
     cursor = conn.cursor()
     today = date.today().isoformat()
     cursor.execute(
-        "SELECT * FROM daily_plans WHERE plan_date = ?",
+        f"SELECT * FROM daily_plans WHERE plan_date = {_param}",
         (today,)
     )
-    row = cursor.fetchone()
+    row = _fetchone(cursor)
     conn.close()
-    return dict(row) if row else None
+    return row
 
 
 def get_yesterday_plan() -> Optional[dict]:
     """Get yesterday's plan to check carryover."""
     conn = get_connection()
     cursor = conn.cursor()
-    from datetime import timedelta
     yesterday = (date.today() - timedelta(days=1)).isoformat()
     cursor.execute(
-        "SELECT * FROM daily_plans WHERE plan_date = ?",
+        f"SELECT * FROM daily_plans WHERE plan_date = {_param}",
         (yesterday,)
     )
-    row = cursor.fetchone()
+    row = _fetchone(cursor)
     conn.close()
-    return dict(row) if row else None
+    return row
 
 
 # Initialize on import

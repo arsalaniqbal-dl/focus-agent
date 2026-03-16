@@ -1,27 +1,24 @@
 """
 PostgreSQL storage for tasks and daily plans (Supabase-hosted).
-Falls back to SQLite if DATABASE_URL is not set (local dev).
+Falls back to SQLite if DB_HOST is not set (local dev).
 """
 import os
 from datetime import datetime, date, timedelta
 from typing import Optional
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DB_HOST = os.environ.get("DB_HOST")
 
-if DATABASE_URL:
+if DB_HOST:
     import psycopg2
     import psycopg2.extras
-    from urllib.parse import urlparse
-
-    _parsed = urlparse(DATABASE_URL)
 
     def get_connection():
         conn = psycopg2.connect(
-            host=_parsed.hostname,
-            port=_parsed.port or 5432,
-            dbname=_parsed.path.lstrip("/"),
-            user=_parsed.username,
-            password=_parsed.password,
+            host=DB_HOST,
+            port=int(os.environ.get("DB_PORT", 5432)),
+            dbname=os.environ.get("DB_NAME", "postgres"),
+            user=os.environ.get("DB_USER", "postgres"),
+            password=os.environ.get("DB_PASSWORD", ""),
         )
         return conn
 
@@ -61,7 +58,7 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
-    if DATABASE_URL:
+    if DB_HOST:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS tasks (
                 id SERIAL PRIMARY KEY,
@@ -114,7 +111,7 @@ def add_task(text: str, area: str = "work") -> int:
     """Add a new task. Returns the task ID."""
     conn = get_connection()
     cursor = conn.cursor()
-    if DATABASE_URL:
+    if DB_HOST:
         cursor.execute(
             "INSERT INTO tasks (text, area) VALUES (%s, %s) RETURNING id",
             (text, area)
@@ -215,7 +212,7 @@ def save_daily_plan(focus_items: list, win_criteria: str = "") -> int:
     today = date.today().isoformat()
     focus_text = "\n".join(focus_items) if focus_items else ""
 
-    if DATABASE_URL:
+    if DB_HOST:
         cursor.execute(
             """INSERT INTO daily_plans (plan_date, focus_items, win_criteria)
                VALUES (%s, %s, %s)

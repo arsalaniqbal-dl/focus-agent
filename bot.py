@@ -284,7 +284,7 @@ def build_done_message(task_text: str) -> str:
 # ============================================
 
 def morning_planning_message() -> tuple:
-    """Generate the morning planning message."""
+    """Generate the morning planning message with per-task actions."""
     tasks = db.get_pending_tasks()
     stuck = db.get_stuck_tasks(min_carryover=3)
 
@@ -292,70 +292,79 @@ def morning_planning_message() -> tuple:
     for t in tasks:
         db.increment_carryover(t["id"])
 
-    text = ":sunrise: *Good morning! Let's plan your day.*\n\n"
+    # Build blocks
+    blocks = []
 
+    # Header
+    header_text = ":sunrise: *Good morning! Let's plan your day.*"
     if tasks:
-        # Separate fresh tasks (day 1) from spillovers
-        fresh_tasks = [t for t in tasks if t['carryover_count'] == 0]
-        spillover_tasks = [t for t in tasks if t['carryover_count'] > 0]
+        spillover_count = sum(1 for t in tasks if t['carryover_count'] > 0)
+        if spillover_count:
+            header_text += f"\n_{len(tasks)} pending, {spillover_count} carried over._"
+        else:
+            header_text += f"\n_{len(tasks)} pending task{'s' if len(tasks) != 1 else ''}._"
 
-        if spillover_tasks:
-            text += ":repeat: *Spillovers from previous days:*\n"
-            for t in spillover_tasks:
-                days = t['carryover_count'] + 1
-                warning = " :warning:" if days >= 3 else ""
-                text += f"  - {t['text']} _(day {days})_{warning}\n"
-            text += "\n"
+    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": header_text}})
+    blocks.append({"type": "divider"})
 
-        if fresh_tasks:
-            text += ":clipboard: *Added yesterday (not yet started):*\n"
-            text += format_task_list(fresh_tasks)
-            text += "\n\n"
+    # Per-task blocks with actions (limit to 10 to stay under Slack's 50-block limit)
+    display_tasks = tasks[:10]
+    for t in display_tasks:
+        days = t['carryover_count'] + 1
+        carryover = f"  ·  day {days}" if t['carryover_count'] > 0 else ""
+        warning = " :warning:" if days >= 3 else ""
+        area_tag = f"  ·  _{t['area']}_" if t['area'] != "work" else ""
 
-        # Summary to prompt action
-        total = len(tasks)
-        if spillover_tasks:
-            text += f"_You have {total} pending item{'s' if total > 1 else ''}. "
-            text += f"{len(spillover_tasks)} carried over - consider prioritizing these today._\n\n"
+        task_text = f"*{t['text']}*{carryover}{area_tag}{warning}"
 
-    if stuck:
-        text += ":rotating_light: *Stuck for 3+ days (what's blocking these?):*\n"
-        for t in stuck:
-            text += f"  - {t['text']} (day {t['carryover_count'] + 1})\n"
-        text += "\n"
-
-    # Daily article recommendation
-    title, url, description = articles.get_daily_article()
-    text += articles.format_article_block(title, url, description)
-    text += "\n\n"
-
-    text += "*What would make today a win?*\n"
-    text += "_Reply with your focus for today, or type `add [task]` to add items._"
-
-    blocks = [
-        {
+        blocks.append({
             "type": "section",
-            "text": {"type": "mrkdwn", "text": text}
-        },
-        {
-            "type": "actions",
-            "elements": [
-                {
-                    "type": "button",
-                    "text": {"type": "plain_text", "text": "Show All Tasks"},
-                    "action_id": "show_all_tasks"
-                },
-                {
-                    "type": "button",
-                    "text": {"type": "plain_text", "text": "I'm Ready to Work"},
-                    "action_id": "ready_to_work",
-                    "style": "primary"
-                }
-            ]
-        }
-    ]
+            "text": {"type": "mrkdwn", "text": task_text},
+            "accessory": {
+                "type": "overflow",
+                "action_id": f"task_overflow_{t['id']}",
+                "options": [
+                    {
+                        "text": {"type": "plain_text", "text": ":white_check_mark: Done"},
+                        "value": f"done_{t['id']}"
+                    },
+                    {
+                        "text": {"type": "plain_text", "text": ":zzz: Snooze until tomorrow"},
+                        "value": f"snooze_{t['id']}"
+                    },
+                    {
+                        "text": {"type": "plain_text", "text": ":wastebasket: Delete"},
+                        "value": f"delete_{t['id']}"
+                    }
+                ]
+            }
+        })
 
-    return text, blocks
+    if len(tasks) > 10:
+        blocks.append({
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": f"_...and {len(tasks) - 10} more. Type `list` to see all._"}
+        })
+
+    blocks.append({"type": "divider"})
+
+    # Daily article
+    title, url, description = articles.get_daily_article()
+    blocks.append({
+        "type": "section",
+        "text": {"type": "mrkdwn", "text": f":book: *Daily Read:* <{url}|{title}>\n_{description}_"}
+    })
+
+    # Win criteria prompt
+    blocks.append({
+        "type": "section",
+        "text": {"type": "mrkdwn", "text": "*What would make today a win?*\n_Reply with `win: [your focus]` or `add [task]`._"}
+    })
+
+    # Fallback text for notifications
+    fallback = f"Good morning! You have {len(tasks)} pending tasks."
+
+    return fallback, blocks
 
 
 def trigger_morning_planning():
@@ -661,6 +670,42 @@ def handle_ready(ack, body, client):
         user_id,
         ":muscle: *Let's go!* Focus on what matters.\n\nType `list` anytime to see your tasks."
     )
+
+
+@app.action(re.compile(r"task_overflow_\d+"))
+def handle_task_overflow(ack, body, client):
+    """Handle overflow menu actions (done/snooze/delete) on task items."""
+    ack()
+    user_id = body["user"]["id"]
+    selected = body["actions"][0]["selected_option"]["value"]
+
+    # Parse action and task_id from value like "done_5", "snooze_5", "delete_5"
+    action, task_id_str = selected.split("_", 1)
+    task_id = int(task_id_str)
+
+    task = db.get_task(task_id)
+    if not task:
+        send_dm(user_id, f"Task #{task_id} not found.")
+        return
+
+    if action == "done":
+        if db.complete_task(task_id):
+            send_dm(user_id, build_done_message(task["text"]))
+        else:
+            send_dm(user_id, f"Couldn't complete task #{task_id}")
+
+    elif action == "snooze":
+        tomorrow = date.today() + timedelta(days=1)
+        if db.snooze_task(task_id, tomorrow):
+            send_dm(user_id, f":zzz: Snoozed *{task['text']}* until {tomorrow.strftime('%A, %b %d')}.")
+        else:
+            send_dm(user_id, f"Couldn't snooze task #{task_id}")
+
+    elif action == "delete":
+        if db.delete_task(task_id):
+            send_dm(user_id, f":wastebasket: Deleted *{task['text']}*")
+        else:
+            send_dm(user_id, f"Couldn't delete task #{task_id}")
 
 
 @app.action("confirm_add_task")

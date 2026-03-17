@@ -101,6 +101,16 @@ def init_db():
             )
         """)
 
+    # Migration: add snoozed_until column
+    try:
+        if DB_HOST:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS snoozed_until DATE")
+        else:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN snoozed_until DATE")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+
     conn.commit()
     conn.close()
 
@@ -142,11 +152,13 @@ def add_task(text: str, area: str = "work") -> int:
 
 
 def get_pending_tasks() -> list:
-    """Get all pending (incomplete) tasks."""
+    """Get all pending (incomplete) tasks, excluding snoozed ones."""
     conn = get_connection()
     cursor = conn.cursor()
+    today = date.today().isoformat()
     cursor.execute(
-        f"SELECT * FROM tasks WHERE status = 'pending' ORDER BY created_at"
+        f"SELECT * FROM tasks WHERE status = 'pending' AND (snoozed_until IS NULL OR snoozed_until <= {_param}) ORDER BY created_at",
+        (today,)
     )
     tasks = _fetchall(cursor)
     conn.close()
@@ -210,6 +222,95 @@ def get_stuck_tasks(min_carryover: int = 3) -> list:
     cursor.execute(
         f"SELECT * FROM tasks WHERE status = 'pending' AND carryover_count >= {_param}",
         (min_carryover,)
+    )
+    tasks = _fetchall(cursor)
+    conn.close()
+    return tasks
+
+
+def snooze_task(task_id: int, until_date: date) -> bool:
+    """Snooze a task until a specific date."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        f"UPDATE tasks SET snoozed_until = {_param} WHERE id = {_param} AND status = 'pending'",
+        (until_date.isoformat(), task_id)
+    )
+    success = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return success
+
+
+def get_snoozed_tasks() -> list:
+    """Get tasks currently snoozed (snoozed_until > today)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    today = date.today().isoformat()
+    cursor.execute(
+        f"SELECT * FROM tasks WHERE status = 'pending' AND snoozed_until > {_param} ORDER BY snoozed_until",
+        (today,)
+    )
+    tasks = _fetchall(cursor)
+    conn.close()
+    return tasks
+
+
+def get_completed_today_count() -> int:
+    """Count tasks completed today."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    today = date.today().isoformat()
+    cursor.execute(
+        f"SELECT COUNT(*) FROM tasks WHERE status = 'completed' AND DATE(completed_at) = {_param}",
+        (today,)
+    )
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
+
+
+def get_completion_streak() -> int:
+    """Count consecutive days (ending today) where at least 1 task was completed."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    streak = 0
+    check_date = date.today()
+    while True:
+        d = check_date.isoformat()
+        cursor.execute(
+            f"SELECT COUNT(*) FROM tasks WHERE status = 'completed' AND DATE(completed_at) = {_param}",
+            (d,)
+        )
+        if cursor.fetchone()[0] > 0:
+            streak += 1
+            check_date -= timedelta(days=1)
+        else:
+            break
+    conn.close()
+    return streak
+
+
+def get_completed_in_range(start_date: date, end_date: date) -> list:
+    """Get tasks completed between two dates (inclusive)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        f"SELECT * FROM tasks WHERE status = 'completed' AND DATE(completed_at) >= {_param} AND DATE(completed_at) <= {_param} ORDER BY completed_at",
+        (start_date.isoformat(), end_date.isoformat())
+    )
+    tasks = _fetchall(cursor)
+    conn.close()
+    return tasks
+
+
+def get_most_stuck_tasks(limit: int = 5) -> list:
+    """Get the most carried-over pending tasks."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        f"SELECT * FROM tasks WHERE status = 'pending' AND carryover_count > 0 ORDER BY carryover_count DESC LIMIT {_param}",
+        (limit,)
     )
     tasks = _fetchall(cursor)
     conn.close()

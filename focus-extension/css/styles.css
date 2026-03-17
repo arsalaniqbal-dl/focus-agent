@@ -257,8 +257,15 @@ body {
 
 .refresh-btn.loading {
   animation: spin 0.8s linear infinite;
-  opacity: 0.5;
+  opacity: 1 !important;
+  color: var(--accent);
   pointer-events: none;
+}
+
+.reading-card.refreshing .reading-title,
+.reading-card.refreshing .reading-description {
+  opacity: 0.3;
+  transition: opacity 0.2s ease;
 }
 
 .reading-title {

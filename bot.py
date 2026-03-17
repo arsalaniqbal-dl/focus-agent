@@ -7,15 +7,17 @@ Usage:
     - "list" or "tasks" - Show pending tasks
     - "done [id]" - Mark task as complete
     - "delete [id]" - Remove a task
+    - "snooze [id] until tomorrow" - Snooze a task
     - "focus" - Start morning planning
-    - "refocus" - Get back on track mid-day
+    - "review" - Weekly review
     - "help" - Show commands
 """
 import os
+import re
 import logging
 import threading
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from dotenv import load_dotenv
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
@@ -42,6 +44,10 @@ app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 MY_USER_ID = os.environ.get("MY_USER_ID")
 MORNING_TIME = os.environ.get("MORNING_TIME", "11:30")
 TIMEZONE = os.environ.get("TIMEZONE", "Asia/Karachi")
+WEEKLY_REVIEW_TIME = os.environ.get("WEEKLY_REVIEW_TIME", "18:30")
+
+# Module-level scheduler (set in setup_scheduler)
+scheduler = None
 
 # Debug: log config on import
 print(f"[CONFIG] MORNING_TIME={MORNING_TIME}, TIMEZONE={TIMEZONE}")
@@ -104,10 +110,31 @@ def api_add_task():
 
     task_id = db.add_task(text, area)
 
-    # Send Slack notification
+    # Send Slack notification with quick-complete button
     if MY_USER_ID:
         try:
-            send_dm(MY_USER_ID, f":heavy_plus_sign: *Added from extension:*\n_{text}_")
+            blocks = [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f":heavy_plus_sign: *Added:* _{text}_"
+                    }
+                },
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "text": {"type": "plain_text", "text": f"Done #{task_id}"},
+                            "action_id": "quick_complete",
+                            "value": str(task_id),
+                            "style": "primary"
+                        }
+                    ]
+                }
+            ]
+            send_dm(MY_USER_ID, f"Added: {text} (done {task_id} to complete)", blocks=blocks)
         except Exception as e:
             logger.error(f"Failed to send add notification: {e}")
 
@@ -133,10 +160,11 @@ def api_complete_task(task_id):
     task_text = task["text"]
 
     if db.complete_task(task_id):
-        # Send Slack notification
+        # Send Slack notification with streak info
         if MY_USER_ID:
             try:
-                send_dm(MY_USER_ID, f":white_check_mark: *Completed from extension:*\n_{task_text}_")
+                msg = build_done_message(task_text)
+                send_dm(MY_USER_ID, msg)
             except Exception as e:
                 logger.error(f"Failed to send completion notification: {e}")
 
@@ -183,22 +211,9 @@ def api_refresh_article():
 @require_auth
 def api_get_stats():
     """Get task stats including completed today count."""
-    pending = len(db.get_pending_tasks())
-    today = datetime.now().strftime('%Y-%m-%d')
-
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    param = "%s" if db.DB_HOST else "?"
-    cursor.execute(
-        f"SELECT COUNT(*) FROM tasks WHERE status = 'completed' AND DATE(completed_at) = {param}",
-        (today,)
-    )
-    completed_today = cursor.fetchone()[0]
-    conn.close()
-
     return jsonify({
-        "pending": pending,
-        "completed_today": completed_today
+        "pending": len(db.get_pending_tasks()),
+        "completed_today": db.get_completed_today_count()
     })
 
 
@@ -242,6 +257,26 @@ def send_dm(user_id: str, text: str, blocks: list = None):
         )
     except Exception as e:
         logger.error(f"Failed to send DM: {e}")
+
+
+def build_done_message(task_text: str) -> str:
+    """Build a completion message with remaining count and streak info."""
+    remaining = len(db.get_pending_tasks())
+    msg = f":white_check_mark: Done: *{task_text}*. {remaining} task{'s' if remaining != 1 else ''} left."
+
+    completed_today = db.get_completed_today_count()
+    if completed_today == 3:
+        msg += "\n:fire: 3 done today — on a roll."
+    elif completed_today == 5:
+        msg += "\n:star2: 5 done today — incredible focus."
+    elif completed_today >= 7:
+        msg += f"\n:trophy: {completed_today} done today — unstoppable."
+
+    streak = db.get_completion_streak()
+    if streak >= 3:
+        msg += f"\n:calendar: {streak}-day streak."
+
+    return msg
 
 
 # ============================================
@@ -330,6 +365,7 @@ def trigger_morning_planning():
         logger.info(f"Sending morning planning to {MY_USER_ID}")
         text, blocks = morning_planning_message()
         send_dm(MY_USER_ID, text, blocks)
+        schedule_stuck_nudge()
         logger.info("Morning planning sent successfully")
     else:
         logger.error("MY_USER_ID not set - cannot send morning planning")
@@ -358,7 +394,6 @@ def handle_message(event, say):
         task_text = original_text[3:].strip()  # Skip "add", then strip whitespace/newlines
         if task_text:
             # Check if it's a bulleted list (multiple tasks)
-            import re
             lines = task_text.split('\n')
             bullet_pattern = re.compile(r'^[\-\*\•\●\○\◦\▪\▸\►\◆\→\»]\s*(.+)$|^(\d+[\.\)]\s*)(.+)$')
 
@@ -408,17 +443,25 @@ def handle_message(event, say):
     # --- LIST TASKS ---
     elif text in ["list", "tasks", "show", "ls"]:
         tasks = db.get_pending_tasks()
-        say(f"*Your Tasks:*\n{format_task_list(tasks)}")
+        snoozed = db.get_snoozed_tasks()
+        msg = f"*Your Tasks:*\n{format_task_list(tasks)}"
+        if snoozed:
+            msg += f"\n\n:zzz: _{len(snoozed)} snoozed_ (type `snoozed` to see)"
+        say(msg)
 
     # --- COMPLETE TASK ---
     elif text.startswith("done ") or text.startswith("complete "):
         try:
             parts = text.split()
             task_id = int(parts[1].replace("#", ""))
-            if db.complete_task(task_id):
-                say(f":tada: Marked #{task_id} as done!")
-            else:
+            task = db.get_task(task_id)
+            if not task:
                 say(f"Couldn't find task #{task_id}")
+                return
+            if db.complete_task(task_id):
+                say(build_done_message(task["text"]))
+            else:
+                say(f"Couldn't complete task #{task_id}")
         except (IndexError, ValueError):
             say("Usage: `done [task_id]` (e.g., `done 3`)")
 
@@ -439,30 +482,60 @@ def handle_message(event, say):
         text_msg, blocks = morning_planning_message()
         say(text=text_msg, blocks=blocks)
 
-    # --- REFOCUS ---
-    elif text in ["refocus", "stuck", "help me focus"]:
-        plan = db.get_today_plan()
-        tasks = db.get_pending_tasks()
+    # --- SNOOZE TASK ---
+    elif text.startswith("snooze "):
+        match = re.match(r'snooze\s+#?(\d+)\s+(?:until\s+)?(.+)', text)
+        if match:
+            task_id = int(match.group(1))
+            duration_text = match.group(2).strip()
+            today = date.today()
 
-        if not tasks:
-            say(":thinking_face: You have no pending tasks. Add some with `add [task]`")
-            return
+            if duration_text == "tomorrow":
+                until = today + timedelta(days=1)
+            elif duration_text in ["monday", "mon"]:
+                days_ahead = (7 - today.weekday()) % 7 or 7
+                until = today + timedelta(days=days_ahead)
+            elif duration_text in ["next week"]:
+                days_ahead = (7 - today.weekday()) % 7 or 7
+                until = today + timedelta(days=days_ahead)
+            elif "day" in duration_text:
+                day_match = re.match(r'(\d+)\s*days?', duration_text)
+                if day_match:
+                    until = today + timedelta(days=int(day_match.group(1)))
+                else:
+                    say("Usage: `snooze [id] until tomorrow` or `snooze [id] 3 days`")
+                    return
+            else:
+                say("Usage: `snooze [id] until tomorrow` or `snooze [id] 3 days`")
+                return
 
-        # Find the smallest/easiest next step
-        msg = ":dart: *Let's refocus.*\n\n"
+            task = db.get_task(task_id)
+            if not task:
+                say(f"Couldn't find task #{task_id}")
+                return
 
-        if plan and plan.get("win_criteria"):
-            msg += f"This morning you said a win would be: _{plan['win_criteria']}_\n\n"
+            if db.snooze_task(task_id, until):
+                say(f":zzz: Snoozed *{task['text']}* until {until.strftime('%A, %b %d')}.")
+            else:
+                say(f"Couldn't snooze task #{task_id}")
+        else:
+            say("Usage: `snooze [id] until tomorrow` or `snooze [id] 3 days`")
 
-        msg += "*Your pending tasks:*\n"
-        msg += format_task_list(tasks[:5])  # Show top 5
+    # --- SNOOZED LIST ---
+    elif text in ["snoozed", "sleeping"]:
+        snoozed = db.get_snoozed_tasks()
+        if not snoozed:
+            say("_No snoozed tasks._")
+        else:
+            msg = ":zzz: *Snoozed tasks:*\n"
+            for t in snoozed:
+                until = t.get("snoozed_until", "")
+                msg += f"  - *{t['id']}*. {t['text']} — back {until}\n"
+            say(msg)
 
-        if len(tasks) > 5:
-            msg += f"\n_...and {len(tasks) - 5} more_\n"
-
-        msg += "\n:point_right: *Pick ONE. What's the smallest next step you can take right now?*"
-
-        say(msg)
+    # --- WEEKLY REVIEW ---
+    elif text in ["review", "weekly", "weekly review"]:
+        say(weekly_review_message())
 
     # --- SET WIN CRITERIA ---
     elif text.startswith("win:") or text.startswith("today:"):
@@ -510,31 +583,48 @@ def handle_message(event, say):
         help_text = """
 :wave: *FocusPrompter Commands*
 
-*Adding & Managing Tasks:*
-- `add [task]` - Add a new task
-- `add [side] task` - Add to side projects
-- `list` - Show all pending tasks
-- `done [id]` - Mark task complete
+*Tasks:*
+- `add [task]` - Add a task (or `add [side] task` for side projects)
+- `list` - Show pending tasks
+- `done [id]` - Complete a task
 - `delete [id]` - Remove a task
+- `snooze [id] until tomorrow` - Snooze (also: `3 days`, `monday`)
+- `snoozed` - See snoozed tasks
 
-*Planning & Focus:*
+*Planning:*
 - `focus` - Start morning planning
-- `refocus` - Get back on track
 - `win: [text]` - Set today's win criteria
-- `read` - Get today's article recommendation
+- `read` - Today's article
+- `review` - Weekly review
 
-*Tips:*
-- I'll DM you each morning at {time}
-- Tasks that carry over get tracked
-- If something's stuck for 3+ days, I'll ask why
+*I'll DM you at {time} each morning and nudge you about stuck tasks.*
         """.format(time=MORNING_TIME)
         say(help_text)
 
-    # --- UNKNOWN ---
+    # --- UNKNOWN: offer to add as task ---
     else:
-        # Treat as a task if it looks like one
-        if len(original_text) > 3 and not original_text.startswith("/"):
-            say(f"Not sure what you mean. Did you want to add a task?\n`add {original_text}`\n\nType `help` for commands.")
+        if len(original_text) > 2 and not original_text.startswith("/"):
+            say(
+                text=f"Add *{original_text}* as a task?",
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {"type": "mrkdwn", "text": f"Add *{original_text}* as a task?"}
+                    },
+                    {
+                        "type": "actions",
+                        "elements": [
+                            {
+                                "type": "button",
+                                "text": {"type": "plain_text", "text": "Yes, add it"},
+                                "action_id": "confirm_add_task",
+                                "value": original_text,
+                                "style": "primary"
+                            }
+                        ]
+                    }
+                ]
+            )
 
 
 # ============================================
@@ -569,8 +659,154 @@ def handle_ready(ack, body, client):
     user_id = body["user"]["id"]
     send_dm(
         user_id,
-        ":muscle: *Let's go!* Focus on what matters.\n\nType `refocus` anytime you need to get back on track."
+        ":muscle: *Let's go!* Focus on what matters.\n\nType `list` anytime to see your tasks."
     )
+
+
+@app.action("confirm_add_task")
+def handle_confirm_add(ack, body, client):
+    """Handle 'Yes, add it' button for unrecognized messages."""
+    ack()
+    user_id = body["user"]["id"]
+    task_text = body["actions"][0]["value"]
+
+    task_id = db.add_task(task_text)
+
+    # Update original message to show it was added
+    try:
+        client.chat_update(
+            channel=body["channel"]["id"],
+            ts=body["message"]["ts"],
+            text=f":white_check_mark: Added: *{task_text}* (#{task_id})",
+            blocks=[]
+        )
+    except Exception as e:
+        logger.error(f"Failed to update message: {e}")
+        send_dm(user_id, f":white_check_mark: Added: *{task_text}* (#{task_id})")
+
+
+@app.action("quick_complete")
+def handle_quick_complete(ack, body, client):
+    """Handle quick-complete button from extension-added tasks."""
+    ack()
+    user_id = body["user"]["id"]
+    task_id = int(body["actions"][0]["value"])
+
+    task = db.get_task(task_id)
+    if not task or task["status"] != "pending":
+        send_dm(user_id, f"Task #{task_id} already completed or not found.")
+        return
+
+    task_text = task["text"]
+    if db.complete_task(task_id):
+        msg = build_done_message(task_text)
+        send_dm(user_id, msg)
+
+        # Update the original message to show completed
+        try:
+            client.chat_update(
+                channel=body["channel"]["id"],
+                ts=body["message"]["ts"],
+                text=f":white_check_mark: ~{task_text}~ — done",
+                blocks=[]
+            )
+        except Exception as e:
+            logger.error(f"Failed to update message: {e}")
+    else:
+        send_dm(user_id, f"Couldn't complete task #{task_id}")
+
+
+# ============================================
+# Weekly Review
+# ============================================
+
+def weekly_review_message() -> str:
+    """Generate the weekly review message."""
+    today = date.today()
+    monday = today - timedelta(days=today.weekday())
+
+    completed = db.get_completed_in_range(monday, today)
+    pending = db.get_pending_tasks()
+    most_stuck = db.get_most_stuck_tasks(limit=5)
+
+    text = f":calendar: *Weekly Review — Week of {monday.strftime('%b %d')}*\n\n"
+
+    if completed:
+        text += f":white_check_mark: *Completed this week: {len(completed)}*\n"
+        for t in completed:
+            text += f"  - {t['text']}\n"
+        text += "\n"
+    else:
+        text += "_No tasks completed this week._\n\n"
+
+    text += f":clipboard: *Still pending: {len(pending)}*\n"
+    if pending:
+        for t in pending[:5]:
+            carryover = f" (day {t['carryover_count'] + 1})" if t['carryover_count'] > 0 else ""
+            text += f"  - {t['text']}{carryover}\n"
+        if len(pending) > 5:
+            text += f"  _...and {len(pending) - 5} more_\n"
+    text += "\n"
+
+    if most_stuck:
+        text += ":warning: *Most carried-over (consider dropping or breaking down):*\n"
+        for t in most_stuck:
+            text += f"  - {t['text']} — *{t['carryover_count'] + 1} days*\n"
+        text += "\n"
+
+    total_touched = len(completed) + len(pending)
+    if total_touched > 0:
+        rate = len(completed) / total_touched * 100
+        text += f":bar_chart: *Completion rate: {rate:.0f}%* ({len(completed)} done / {total_touched} total)\n\n"
+
+    text += "_Clean up: delete what you won't do, snooze what can wait, start Monday fresh._"
+    return text
+
+
+def trigger_weekly_review():
+    """Send weekly review DM (called by scheduler on Fridays)."""
+    logger.info(f"=== WEEKLY REVIEW TRIGGERED at {datetime.now()} ===")
+    if MY_USER_ID:
+        text = weekly_review_message()
+        send_dm(MY_USER_ID, text)
+        logger.info("Weekly review sent successfully")
+    else:
+        logger.error("MY_USER_ID not set - cannot send weekly review")
+
+
+# ============================================
+# Stuck Task Midday Nudge
+# ============================================
+
+def schedule_stuck_nudge():
+    """Schedule a midday nudge for stuck tasks, 2.5 hours after morning time."""
+    from apscheduler.triggers.date import DateTrigger
+
+    stuck = db.get_stuck_tasks(min_carryover=3)
+    if not stuck or not MY_USER_ID or not scheduler:
+        return
+
+    tz = pytz.timezone(TIMEZONE)
+    nudge_time = datetime.now(tz) + timedelta(hours=2, minutes=30)
+    stuck_ids = [t["id"] for t in stuck]
+
+    def send_nudge():
+        for task_id in stuck_ids:
+            task = db.get_task(task_id)
+            if task and task["status"] == "pending":
+                send_dm(
+                    MY_USER_ID,
+                    f"Still carrying *{task['text']}* (day {task['carryover_count'] + 1}) — what's the smallest next step?\n`done {task_id}` · `snooze {task_id} until tomorrow` · `delete {task_id}`"
+                )
+
+    scheduler.add_job(
+        send_nudge,
+        DateTrigger(run_date=nudge_time),
+        id="stuck_nudge",
+        replace_existing=True,
+        misfire_grace_time=600
+    )
+    logger.info(f"Stuck nudge scheduled for {nudge_time.strftime('%H:%M %Z')}")
 
 
 # ============================================
@@ -578,26 +814,41 @@ def handle_ready(ack, body, client):
 # ============================================
 
 def setup_scheduler():
-    """Set up the morning planning scheduler."""
+    """Set up the morning planning and weekly review schedulers."""
+    global scheduler
     tz = pytz.timezone(TIMEZONE)
     scheduler = BackgroundScheduler(timezone=tz)
 
+    # Morning planning
     hour, minute = MORNING_TIME.split(":")
     scheduler.add_job(
         trigger_morning_planning,
-        CronTrigger(hour=int(hour), minute=int(minute), timezone=tz),  # explicit timezone
+        CronTrigger(hour=int(hour), minute=int(minute), timezone=tz),
         id="morning_planning",
         replace_existing=True,
-        misfire_grace_time=300  # 5 min grace period if job missed
+        misfire_grace_time=300
+    )
+
+    # Weekly review: Friday evening
+    w_hour, w_minute = WEEKLY_REVIEW_TIME.split(":")
+    scheduler.add_job(
+        trigger_weekly_review,
+        CronTrigger(day_of_week='fri', hour=int(w_hour), minute=int(w_minute), timezone=tz),
+        id="weekly_review",
+        replace_existing=True,
+        misfire_grace_time=600
     )
 
     scheduler.start()
 
-    # Log next scheduled run
     job = scheduler.get_job("morning_planning")
     if job and job.next_run_time:
         logger.info(f"Scheduler started. Morning planning at {MORNING_TIME} {TIMEZONE}")
         logger.info(f"Next scheduled run: {job.next_run_time.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+
+    review_job = scheduler.get_job("weekly_review")
+    if review_job and review_job.next_run_time:
+        logger.info(f"Weekly review: Fridays at {WEEKLY_REVIEW_TIME} {TIMEZONE}")
 
     return scheduler
 

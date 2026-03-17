@@ -322,10 +322,51 @@ async function loadTasks() {
 // Article Refresh
 let seenArticles = [];
 
+// Original 30 articles — pre-mark as seen
+const ALREADY_READ = [
+  "The Technium: What Technology Wants",
+  "This Is Water - David Foster Wallace",
+  "Solitude and Leadership",
+  "The Maintenance Race",
+  "Meditations on Moloch",
+  "The Gervais Principle",
+  "You and Your Research - Richard Hamming",
+  "The Bus Ticket Theory of Genius",
+  "The Tyranny of the Marginal User",
+  "Taste for Makers",
+  "The Age of the Essay",
+  "Speed Matters",
+  "The Lesson to Unlearn",
+  "The Pmarca Guide to Personal Productivity",
+  "Teach Yourself Programming in Ten Years",
+  "The Cook and the Chef: Musk's Secret Sauce",
+  "What You'll Wish You'd Known",
+  "In Praise of Idleness",
+  "A Mathematician's Lament",
+  "Hackers and Painters",
+  "The Psychology of Human Misjudgment",
+  "Schlep Blindness",
+  "Do Things that Don't Scale",
+  "The Idea Maze",
+  "1000 True Fans",
+  "Becoming a Magician",
+  "How to Do Great Work",
+  "The Case for Working With Your Hands",
+  "I Will Teach You to Be Rich in One Post",
+  "The Lindy Effect",
+];
+
 async function loadSeenArticles() {
   return new Promise(resolve => {
-    chrome.storage.local.get(['seenArticles'], (result) => {
+    chrome.storage.local.get(['seenArticles', 'seededOldArticles'], (result) => {
       seenArticles = result.seenArticles || [];
+      // One-time seed: mark original 30 as read
+      if (!result.seededOldArticles) {
+        for (const title of ALREADY_READ) {
+          if (!seenArticles.includes(title)) seenArticles.push(title);
+        }
+        chrome.storage.local.set({ seenArticles, seededOldArticles: true });
+      }
       resolve();
     });
   });
@@ -348,6 +389,7 @@ async function handleRefreshArticle(e) {
   if (btn.classList.contains('loading')) return;
 
   btn.classList.add('loading');
+  readingCard.classList.add('refreshing');
   await loadSeenArticles();
 
   try {
@@ -362,6 +404,7 @@ async function handleRefreshArticle(e) {
     showToast('Failed to refresh article', 'error');
   } finally {
     btn.classList.remove('loading');
+    readingCard.classList.remove('refreshing');
   }
 }
 

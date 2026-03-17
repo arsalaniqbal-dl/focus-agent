@@ -672,6 +672,27 @@ def handle_ready(ack, body, client):
     )
 
 
+@app.shortcut("add_as_task")
+def handle_add_as_task(ack, shortcut, client):
+    """Handle 'Add as Task' message shortcut from any message's context menu."""
+    ack()
+    message_text = shortcut.get("message", {}).get("text", "").strip()
+    user_id = shortcut["user"]["id"]
+
+    if not message_text:
+        client.chat_postEphemeral(
+            channel=shortcut["channel"]["id"],
+            user=user_id,
+            text="Couldn't read that message."
+        )
+        return
+
+    # Truncate if too long
+    task_text = message_text[:200]
+    task_id = db.add_task(task_text)
+    send_dm(user_id, f":white_check_mark: Added from message: *{task_text}* (#{task_id})\n`done {task_id}` to complete")
+
+
 @app.action(re.compile(r"task_overflow_\d+"))
 def handle_task_overflow(ack, body, client):
     """Handle overflow menu actions (done/snooze/delete) on task items."""

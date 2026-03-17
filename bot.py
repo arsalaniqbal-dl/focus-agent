@@ -690,7 +690,25 @@ def handle_add_as_task(ack, shortcut, client):
     # Truncate if too long
     task_text = message_text[:200]
     task_id = db.add_task(task_text)
-    send_dm(user_id, f":white_check_mark: Added from message: *{task_text}* (#{task_id})\n`done {task_id}` to complete")
+    blocks = [
+        {
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": f":white_check_mark: Added: *{task_text}*"}
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": f"Done #{task_id}"},
+                    "action_id": "quick_complete",
+                    "value": str(task_id),
+                    "style": "primary"
+                }
+            ]
+        }
+    ]
+    send_dm(user_id, f"Added: {task_text} (done {task_id} to complete)", blocks=blocks)
 
 
 @app.action(re.compile(r"task_overflow_\d+"))

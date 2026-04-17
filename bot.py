@@ -23,7 +23,7 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, redirect
 from flask_cors import CORS
 import pytz
 
@@ -69,6 +69,11 @@ CORS(api, resources={
 
 
 @api.route("/app")
+def serve_web_app_redirect():
+    """Redirect /app to /app/ so relative asset paths resolve correctly."""
+    return redirect("/app/")
+
+
 @api.route("/app/")
 def serve_web_app():
     """Serve the FocusPrompter web app (mobile-friendly extension UI)."""

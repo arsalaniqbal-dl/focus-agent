@@ -264,6 +264,337 @@
             color: var(--text-muted);
         }
 
+        /* Extension Section */
+        .extension {
+            padding: 60px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .extension-content {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        .extension-text {
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .extension-features {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 768px) {
+            .extension-text h2 {
+                font-size: 1.75rem;
+            }
+
+            .extension-features {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .ext-feature {
+                text-align: left;
+            }
+        }
+
+        .extension-text h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: -0.025em;
+        }
+
+        .extension-text h2 span {
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .extension-text > p {
+            color: var(--text-muted);
+            margin-bottom: 32px;
+            font-size: 1.1rem;
+        }
+
+        .extension-features {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .ext-feature {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-align: left;
+        }
+
+        .ext-feature-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: rgba(249, 115, 22, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .ext-feature-icon svg {
+            width: 16px;
+            height: 16px;
+            color: var(--accent);
+        }
+
+        .ext-feature p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .ext-feature p strong {
+            color: var(--text);
+        }
+
+        .ext-feature p kbd {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 0.8em;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Browser mockup */
+        .browser-mockup {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .browser-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: #1a1c2e;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .browser-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .browser-dots span {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #3b3f54;
+        }
+
+        .browser-dots span:first-child { background: #ff5f57; }
+        .browser-dots span:nth-child(2) { background: #febc2e; }
+        .browser-dots span:last-child { background: #28c840; }
+
+        .browser-tab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: var(--surface);
+            border-radius: 6px 6px 0 0;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-left: 8px;
+        }
+
+        .browser-tab svg {
+            width: 12px;
+            height: 12px;
+            color: var(--accent);
+        }
+
+        .browser-content {
+            padding: 24px 32px;
+            background: #141627;
+            min-height: 280px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Mockup UI - Landscape Layout */
+        .mockup-ui {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 32px;
+            align-items: start;
+        }
+
+        @media (max-width: 700px) {
+            .mockup-ui {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+
+        .mockup-left {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .mockup-greeting {
+            text-align: center;
+        }
+
+        .mockup-time {
+            font-size: 2.5rem;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            color: var(--text);
+        }
+
+        .mockup-hello {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Daily Read Card */
+        .mockup-reading {
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 12px 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mockup-reading::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #ef4444 0%, #f97316 50%, #14b8a6 100%);
+            border-radius: 3px 0 0 3px;
+        }
+
+        .mockup-reading-label {
+            font-size: 0.6rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            color: #ef4444;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .mockup-reading-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+
+        .mockup-reading-desc {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Right Column */
+        .mockup-right {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Input */
+        .mockup-input {
+            display: flex;
+            gap: 10px;
+        }
+
+        .mockup-input input {
+            flex: 1;
+            padding: 10px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .mockup-input button {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            background: #ef4444;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* Tasks Section */
+        .mockup-tasks-header {
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .mockup-tasks {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .mockup-task {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: var(--surface);
+            border-radius: 8px;
+            font-size: 0.75rem;
+        }
+
+        .mockup-task .checkbox {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--text-muted);
+            border-radius: 4px;
+            flex-shrink: 0;
+            opacity: 0.5;
+        }
+
+        .mockup-task .text {
+            flex: 1;
+            color: var(--text);
+            font-weight: 500;
+        }
+
         /* Commands */
         .commands {
             padding: 60px 0;
@@ -503,6 +834,98 @@
                         <div class="feature-icon">&#128172;</div>
                         <h3>Lives in Slack</h3>
                         <p>No new app to open. Manage tasks right where you already work, through simple DM commands.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="extension">
+            <div class="container">
+                <div class="extension-content">
+                    <div class="extension-text">
+                        <h2>Works in your browser too</h2>
+                        <p>Prefer staying in your browser? The companion Chrome extension replaces your new tab with your task list.</p>
+                        <div class="extension-features">
+                            <div class="ext-feature">
+                                <div class="ext-feature-icon">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                </div>
+                                <p><strong>Syncs with Slack</strong> — Same tasks, different view. Add from either place.</p>
+                            </div>
+                            <div class="ext-feature">
+                                <div class="ext-feature-icon">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                </div>
+                                <p><strong>Keyboard shortcuts</strong> — <kbd>/</kbd> to add, arrows to navigate, <kbd>x</kbd> to complete.</p>
+                            </div>
+                            <div class="ext-feature">
+                                <div class="ext-feature-icon">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                    </svg>
+                                </div>
+                                <p><strong>Daily reading</strong> — A curated article to start your day with perspective.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="browser-mockup">
+                        <div class="browser-toolbar">
+                            <div class="browser-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <div class="browser-tab">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
+                                </svg>
+                                New Tab
+                            </div>
+                        </div>
+                        <div class="browser-content">
+                            <div class="mockup-ui">
+                                <div class="mockup-left">
+                                    <div class="mockup-greeting">
+                                        <div class="mockup-time">10:58 AM</div>
+                                        <div class="mockup-hello">Good morning. Make it count.</div>
+                                    </div>
+                                    <div class="mockup-reading">
+                                        <div class="mockup-reading-label">Daily Read (10-15 min)</div>
+                                        <div class="mockup-reading-title">The Technium: What Technology Wants</div>
+                                        <div class="mockup-reading-desc">Kevin Kelly on technology as an extension of life's evolutionary force.</div>
+                                    </div>
+                                </div>
+                                <div class="mockup-right">
+                                    <div class="mockup-input">
+                                        <input type="text" placeholder="Add a task... (press / to focus)" disabled>
+                                        <button disabled>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="mockup-tasks-header">Tasks (3)</div>
+                                    <div class="mockup-tasks">
+                                        <div class="mockup-task">
+                                            <div class="checkbox"></div>
+                                            <span class="text">Review API documentation</span>
+                                        </div>
+                                        <div class="mockup-task">
+                                            <div class="checkbox"></div>
+                                            <span class="text">Ship authentication feature</span>
+                                        </div>
+                                        <div class="mockup-task">
+                                            <div class="checkbox"></div>
+                                            <span class="text">Write tests for checkout flow</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -23,7 +23,7 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import pytz
 
@@ -56,14 +56,29 @@ print(f"[CONFIG] MORNING_TIME={MORNING_TIME}, TIMEZONE={TIMEZONE}")
 # HTTP API for Chrome Extension
 # ============================================
 
-api = Flask(__name__)
+EXTENSION_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'focus-extension')
+
+api = Flask(__name__, static_folder=EXTENSION_DIR, static_url_path='/app/static')
 CORS(api, resources={
     r"/api/*": {
-        "origins": ["chrome-extension://*", "http://localhost:*"],
+        "origins": ["chrome-extension://*", "http://localhost:*", "https://*.railway.app"],
         "methods": ["GET", "POST", "DELETE", "OPTIONS"],
         "allow_headers": ["Authorization", "Content-Type"]
     }
 })
+
+
+@api.route("/app")
+@api.route("/app/")
+def serve_web_app():
+    """Serve the FocusPrompter web app (mobile-friendly extension UI)."""
+    return send_from_directory(EXTENSION_DIR, 'newtab.html')
+
+
+@api.route("/app/<path:filename>")
+def serve_web_app_files(filename):
+    """Serve extension assets (JS, CSS, icons)."""
+    return send_from_directory(EXTENSION_DIR, filename)
 
 API_TOKEN = os.environ.get("API_TOKEN")
 API_PORT = int(os.environ.get("API_PORT", os.environ.get("PORT", 8080)))

@@ -69,6 +69,13 @@ async function init() {
   // Check configuration and load tasks
   const config = await Storage.getConfig();
 
+  // Auto-detect API URL when served as web app (not extension)
+  if (!config.apiUrl && !isExtension && window.location.pathname.startsWith('/app')) {
+    const autoUrl = window.location.origin;
+    await Storage.saveConfig(autoUrl, config.token);
+    config.apiUrl = autoUrl;
+  }
+
   if (!config.apiUrl || !config.token) {
     showSetupBanner();
     return;
@@ -162,7 +169,7 @@ function getGreeting(hour) {
 async function openSettings() {
   // Load current config into form
   const config = await Storage.getConfig();
-  apiUrlInput.value = config.apiUrl;
+  apiUrlInput.value = config.apiUrl || (!isExtension ? window.location.origin : '');
   apiTokenInput.value = config.token;
   connectionStatus.classList.add('hidden');
 
@@ -357,19 +364,15 @@ const ALREADY_READ = [
 ];
 
 async function loadSeenArticles() {
-  return new Promise(resolve => {
-    chrome.storage.local.get(['seenArticles', 'seededOldArticles'], (result) => {
-      seenArticles = result.seenArticles || [];
-      // One-time seed: mark original 30 as read
-      if (!result.seededOldArticles) {
-        for (const title of ALREADY_READ) {
-          if (!seenArticles.includes(title)) seenArticles.push(title);
-        }
-        chrome.storage.local.set({ seenArticles, seededOldArticles: true });
-      }
-      resolve();
-    });
-  });
+  const result = await Storage.localGet(['seenArticles', 'seededOldArticles']);
+  seenArticles = result.seenArticles || [];
+  // One-time seed: mark original 30 as read
+  if (!result.seededOldArticles) {
+    for (const title of ALREADY_READ) {
+      if (!seenArticles.includes(title)) seenArticles.push(title);
+    }
+    await Storage.localSet({ seenArticles, seededOldArticles: true });
+  }
 }
 
 function trackArticle(title) {
@@ -377,7 +380,7 @@ function trackArticle(title) {
     seenArticles.push(title);
     // Keep last 50 to avoid filling storage
     if (seenArticles.length > 50) seenArticles = seenArticles.slice(-50);
-    chrome.storage.local.set({ seenArticles });
+    Storage.localSet({ seenArticles });
   }
 }
 

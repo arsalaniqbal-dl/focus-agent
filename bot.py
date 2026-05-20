@@ -44,7 +44,6 @@ app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 MY_USER_ID = os.environ.get("MY_USER_ID")
 MORNING_TIME = os.environ.get("MORNING_TIME", "11:30")
 TIMEZONE = os.environ.get("TIMEZONE", "Asia/Karachi")
-WEEKLY_REVIEW_TIME = os.environ.get("WEEKLY_REVIEW_TIME", "18:30")
 
 # Module-level scheduler (set in setup_scheduler)
 scheduler = None
@@ -394,7 +393,6 @@ def trigger_morning_planning():
         logger.info(f"Sending morning planning to {MY_USER_ID}")
         text, blocks = morning_planning_message()
         send_dm(MY_USER_ID, text, blocks)
-        schedule_stuck_nudge()
         logger.info("Morning planning sent successfully")
     else:
         logger.error("MY_USER_ID not set - cannot send morning planning")
@@ -626,7 +624,7 @@ def handle_message(event, say):
 - `read` - Today's article
 - `review` - Weekly review
 
-*I'll DM you at {time} each morning and nudge you about stuck tasks.*
+*I'll DM you at {time} each morning.*
         """.format(time=MORNING_TIME)
         say(help_text)
 
@@ -867,52 +865,6 @@ def weekly_review_message() -> str:
     return text
 
 
-def trigger_weekly_review():
-    """Send weekly review DM (called by scheduler on Fridays)."""
-    logger.info(f"=== WEEKLY REVIEW TRIGGERED at {datetime.now()} ===")
-    if MY_USER_ID:
-        text = weekly_review_message()
-        send_dm(MY_USER_ID, text)
-        logger.info("Weekly review sent successfully")
-    else:
-        logger.error("MY_USER_ID not set - cannot send weekly review")
-
-
-# ============================================
-# Stuck Task Midday Nudge
-# ============================================
-
-def schedule_stuck_nudge():
-    """Schedule a midday nudge for stuck tasks, 2.5 hours after morning time."""
-    from apscheduler.triggers.date import DateTrigger
-
-    stuck = db.get_stuck_tasks(min_carryover=3)
-    if not stuck or not MY_USER_ID or not scheduler:
-        return
-
-    tz = pytz.timezone(TIMEZONE)
-    nudge_time = datetime.now(tz) + timedelta(hours=2, minutes=30)
-    stuck_ids = [t["id"] for t in stuck]
-
-    def send_nudge():
-        for task_id in stuck_ids:
-            task = db.get_task(task_id)
-            if task and task["status"] == "pending":
-                send_dm(
-                    MY_USER_ID,
-                    f"Still carrying *{task['text']}* (day {task['carryover_count'] + 1}) — what's the smallest next step?\n`done {task_id}` · `snooze {task_id} until tomorrow` · `delete {task_id}`"
-                )
-
-    scheduler.add_job(
-        send_nudge,
-        DateTrigger(run_date=nudge_time),
-        id="stuck_nudge",
-        replace_existing=True,
-        misfire_grace_time=600
-    )
-    logger.info(f"Stuck nudge scheduled for {nudge_time.strftime('%H:%M %Z')}")
-
-
 # ============================================
 # Scheduler Setup
 # ============================================
@@ -933,26 +885,12 @@ def setup_scheduler():
         misfire_grace_time=300
     )
 
-    # Weekly review: Friday evening
-    w_hour, w_minute = WEEKLY_REVIEW_TIME.split(":")
-    scheduler.add_job(
-        trigger_weekly_review,
-        CronTrigger(day_of_week='fri', hour=int(w_hour), minute=int(w_minute), timezone=tz),
-        id="weekly_review",
-        replace_existing=True,
-        misfire_grace_time=600
-    )
-
     scheduler.start()
 
     job = scheduler.get_job("morning_planning")
     if job and job.next_run_time:
         logger.info(f"Scheduler started. Morning planning at {MORNING_TIME} {TIMEZONE}")
         logger.info(f"Next scheduled run: {job.next_run_time.strftime('%Y-%m-%d %H:%M:%S %Z')}")
-
-    review_job = scheduler.get_job("weekly_review")
-    if review_job and review_job.next_run_time:
-        logger.info(f"Weekly review: Fridays at {WEEKLY_REVIEW_TIME} {TIMEZONE}")
 
     return scheduler
 

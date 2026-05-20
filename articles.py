@@ -1,388 +1,2506 @@
 """
-Curated reading list for daily tech & philosophy refreshers.
-10-15 minute reads on technology, focus, and meaning.
+Curated reading list for daily tech, startup, AI, philosophy, and progress refreshers.
+Each entry is a 4-tuple: (title, url, description, theme).
+One article per day, deterministic by day-of-year with a seeded per-cycle shuffle so
+you see every entry in a different order each year.
 """
 import random
 from datetime import date
 
-# Curated articles: (title, url, one-liner)
+# Curated articles: (title, url, description, theme)
+# Themes: startups, ai, philosophy, technology, progress
 ARTICLES = [
-    (
-        "The Technium: What Technology Wants",
-        "https://kk.org/thetechnium/what-technology/",
-        "Kevin Kelly on technology as an extension of life's evolutionary force."
-    ),
-    (
-        "This Is Water - David Foster Wallace",
-        "https://fs.blog/david-foster-wallace-this-is-water/",
-        "The power of choosing what to pay attention to in daily life."
-    ),
-    (
-        "Solitude and Leadership",
-        "https://theamericanscholar.org/solitude-and-leadership/",
-        "William Deresiewicz on why true leadership requires thinking alone."
-    ),
-    (
-        "The Maintenance Race",
-        "https://www.worksinprogress.co/issue/the-maintenance-race/",
-        "Why maintaining what we build matters more than building new things."
-    ),
-    (
-        "Meditations on Moloch",
-        "https://slatestarcodex.com/2014/07/30/meditations-on-moloch/",
-        "Scott Alexander on coordination problems and why we can't have nice things."
-    ),
-    (
-        "The Gervais Principle",
-        "https://www.ribbonfarm.com/2009/10/07/the-gervais-principle-or-the-office-according-to-the-office/",
-        "A ruthlessly honest look at organizational dynamics through The Office."
-    ),
-    (
-        "You and Your Research - Richard Hamming",
-        "https://www.cs.virginia.edu/~robins/YouAndYourResearch.html",
-        "What separates those who do great work from those who could but don't."
-    ),
-    (
-        "The Bus Ticket Theory of Genius",
-        "http://paulgraham.com/genius.html",
-        "Paul Graham on obsessive interest as the key ingredient of exceptional work."
-    ),
-    (
-        "The Tyranny of the Marginal User",
-        "https://nothinghuman.substack.com/p/the-tyranny-of-the-marginal-user",
-        "Why software keeps getting dumbed down and what it means for power users."
-    ),
-    (
-        "Taste for Makers",
-        "http://paulgraham.com/taste.html",
-        "On developing judgment about what's good in design and creation."
-    ),
-    (
-        "The Age of the Essay",
-        "http://paulgraham.com/essay.html",
-        "Essays as a way of figuring things out, not just communicating."
-    ),
-    (
-        "Speed Matters",
-        "https://jsomers.net/blog/speed-matters",
-        "Why being fast changes what you're capable of doing."
-    ),
-    (
-        "The Lesson to Unlearn",
-        "http://paulgraham.com/lesson.html",
-        "How school trains us to game the system instead of doing real work."
-    ),
-    (
-        "The Pmarca Guide to Personal Productivity",
-        "https://pmarchive.com/guide_to_personal_productivity.html",
-        "Marc Andreessen's contrarian take on getting things done."
-    ),
-    (
-        "Teach Yourself Programming in Ten Years",
-        "https://norvig.com/21-days.html",
-        "Peter Norvig on why mastery takes time and why that's okay."
-    ),
-    (
-        "The Cook and the Chef: Musk's Secret Sauce",
-        "https://waitbutwhy.com/2015/11/the-cook-and-the-chef-musks-secret-sauce.html",
-        "First principles thinking explained through a cooking metaphor."
-    ),
-    (
-        "What You'll Wish You'd Known",
-        "http://paulgraham.com/hs.html",
-        "Advice for your younger self on what actually matters."
-    ),
-    (
-        "In Praise of Idleness",
-        "https://harpers.org/archive/1932/10/in-praise-of-idleness/",
-        "Bertrand Russell's 1932 essay on why we should work less."
-    ),
-    (
-        "A Mathematician's Lament",
-        "https://www.maa.org/external_archive/devlin/LockshartsLament.pdf",
-        "Paul Lockhart on how we've stripped the beauty from mathematics."
-    ),
-    (
-        "Hackers and Painters",
-        "http://paulgraham.com/hp.html",
-        "What software creators can learn from Renaissance artists."
-    ),
-    (
-        "The Psychology of Human Misjudgment",
-        "https://fs.blog/great-talks/psychology-human-misjudgment/",
-        "Charlie Munger's masterclass on cognitive biases."
-    ),
-    (
-        "Schlep Blindness",
-        "http://paulgraham.com/schlep.html",
-        "Why we unconsciously avoid hard but valuable work."
-    ),
-    (
-        "Do Things that Don't Scale",
-        "http://paulgraham.com/ds.html",
-        "The counterintuitive way to build something big."
-    ),
-    (
-        "The Idea Maze",
-        "https://cdixon.org/2013/08/04/the-idea-maze",
-        "Chris Dixon on why ideas are less about the destination than the path."
-    ),
-    (
-        "1000 True Fans",
-        "https://kk.org/thetechnium/1000-true-fans/",
-        "Kevin Kelly on a sustainable creative life without mass scale."
-    ),
-    (
-        "Becoming a Magician",
-        "https://autotranslucence.com/2018/03/30/becoming-a-magician/",
-        "On finding mentors who make the impossible look easy."
-    ),
-    (
-        "How to Do Great Work",
-        "http://paulgraham.com/greatwork.html",
-        "Paul Graham's synthesis on what leads to exceptional outcomes."
-    ),
-    (
-        "The Case for Working With Your Hands",
-        "https://www.nytimes.com/2009/05/24/magazine/24labor-t.html",
-        "Matthew Crawford on the hidden satisfactions of physical craft."
-    ),
-    (
-        "I Will Teach You to Be Rich in One Post",
-        "https://www.iwillteachyoutoberich.com/blog/the-1-page-personal-finance-plan/",
-        "Ramit Sethi's no-BS personal finance framework."
-    ),
-    (
-        "The Lindy Effect",
-        "https://fs.blog/the-lindy-effect/",
-        "Why old ideas that survive are likely to keep surviving."
-    ),
 
-    # --- Expanded collection ---
+    # ============================================
+    # STARTUPS — founders, building, fundraising, scaling
+    # ============================================
     (
-        "Life is Short",
-        "http://paulgraham.com/vb.html",
-        "Paul Graham on why life is too short to spend on things that don't matter."
+        "Six Principles for Making New Things",
+        "http://paulgraham.com/13sentences.html",
+        "Paul Graham distills startup advice into thirteen sentences worth memorizing.",
+        "startups",
     ),
     (
-        "Maker's Schedule, Manager's Schedule",
-        "http://paulgraham.com/makersschedule.html",
-        "Paul Graham on why a single meeting can blow a whole afternoon for a maker."
+        "Organic Startup Ideas",
+        "http://paulgraham.com/aord.html",
+        "Why the best startup ideas come from things you yourself want — not market research.",
+        "startups",
     ),
     (
-        "Keep Your Identity Small",
-        "http://paulgraham.com/identity.html",
-        "Paul Graham on how the labels you attach to yourself make you dumber."
+        "Beating the Averages",
+        "http://paulgraham.com/avg.html",
+        "How Paul Graham's team used Lisp to outpace competitors who used what everyone else used.",
+        "startups",
     ),
     (
-        "The Top Idea in Your Mind",
-        "http://paulgraham.com/top.html",
-        "Paul Graham on how your default thought reveals what actually matters to you."
-    ),
-    (
-        "How to Think for Yourself",
-        "http://paulgraham.com/think.html",
-        "Paul Graham on independent-mindedness and how to cultivate it."
-    ),
-    (
-        "Putting Ideas into Words",
-        "http://paulgraham.com/words.html",
-        "Paul Graham on why writing is not just a way to communicate but a way to think."
-    ),
-    (
-        "What I Worked On",
-        "http://paulgraham.com/worked.html",
-        "Paul Graham's autobiography tracing his path from painting to Lisp to Y Combinator."
+        "Before the Startup",
+        "http://paulgraham.com/before.html",
+        "What undergrads should actually do if they want to start a company someday.",
+        "startups",
     ),
     (
         "Cities and Ambition",
         "http://paulgraham.com/cities.html",
-        "Paul Graham on how great cities send you a message about what kind of ambition matters."
+        "How the place you live whispers a message about what matters.",
+        "startups",
     ),
     (
-        "Mean People Fail",
-        "http://paulgraham.com/mean.html",
-        "Paul Graham on why being mean makes you stupid and limits what you can build."
+        "How to Disagree",
+        "http://paulgraham.com/disagree.html",
+        "A hierarchy of disagreement from name-calling up to refuting the central point.",
+        "startups",
     ),
     (
-        "The Tail End",
-        "https://waitbutwhy.com/2015/12/the-tail-end.html",
-        "Tim Urban on visualizing how little time you have left with the people you love."
+        "Do Things That Don't Scale",
+        "http://paulgraham.com/ds.html",
+        "The unscalable, grindy hand-work that turns out to be the secret sauce of startups.",
+        "startups",
     ),
     (
-        "Your Life in Weeks",
-        "https://waitbutwhy.com/2014/05/life-weeks.html",
-        "Tim Urban on seeing your entire life as a grid of weeks — most already gone."
+        "What We Look for in Founders",
+        "http://paulgraham.com/founders.html",
+        "Five qualities that distinguish founders who make it from those who don't.",
+        "startups",
     ),
     (
-        "Why Procrastinators Procrastinate",
-        "https://waitbutwhy.com/2013/10/why-procrastinators-procrastinate.html",
-        "Tim Urban on the Instant Gratification Monkey and the Panic Monster in your brain."
+        "The Founder Visa",
+        "http://paulgraham.com/foundervisa.html",
+        "Why letting immigrant founders in is the cheapest economic intervention there is.",
+        "startups",
     ),
     (
-        "How to Pick a Career (That Actually Fits You)",
-        "https://waitbutwhy.com/2018/04/picking-career.html",
-        "Tim Urban on the Yearning Octopus and first-principles career thinking."
+        "The Bus Ticket Theory of Genius",
+        "http://paulgraham.com/genius.html",
+        "Obsessive interest in seemingly useless things as the engine of great work.",
+        "startups",
     ),
     (
-        "I Can Tolerate Anything Except The Outgroup",
-        "https://slatestarcodex.com/2014/09/30/i-can-tolerate-anything-except-the-outgroup/",
-        "Scott Alexander on why tolerance is hardest for those closest to us, not farthest."
+        "Be Good",
+        "http://paulgraham.com/good.html",
+        "Why startups that aim to help people end up succeeding more often than those that don't.",
+        "startups",
     ),
     (
-        "Considerations on Cost Disease",
-        "https://slatestarcodex.com/2017/02/09/considerations-on-cost-disease/",
-        "Scott Alexander on why everything — healthcare, education, housing — keeps getting more expensive."
+        "Startup = Growth",
+        "http://paulgraham.com/growth.html",
+        "The single sentence definition of what makes a company a startup — and why it matters.",
+        "startups",
     ),
     (
-        "Book Review: Seeing Like a State",
-        "https://slatestarcodex.com/2017/03/16/book-review-seeing-like-a-state/",
-        "Scott Alexander on why top-down plans by governments fail in predictable ways."
+        "What You Can't Say",
+        "http://paulgraham.com/heresy.html",
+        "Identifying the orthodoxies of your own era — the ideas you can't think because they're invisible.",
+        "startups",
     ),
     (
-        "How To Be Successful",
+        "How to Make Wealth",
+        "http://paulgraham.com/hp.html",
+        "How understanding wealth creation changes how you think about your career.",
+        "startups",
+    ),
+    (
+        "How to Hold a Program in Your Head",
+        "http://paulgraham.com/hwh.html",
+        "The mental conditions that programming-heavy work demands.",
+        "startups",
+    ),
+    (
+        "It's Charisma, Stupid",
+        "http://paulgraham.com/icad.html",
+        "Why presidential elections — and most contests — are won on charisma, not ideas.",
+        "startups",
+    ),
+    (
+        "Mind the Gap",
+        "http://paulgraham.com/ineq.html",
+        "Why economic inequality is mostly a feature, not a bug, when wealth is being created.",
+        "startups",
+    ),
+    (
+        "How to Do What You Love",
+        "http://paulgraham.com/love.html",
+        "Distinguishing real interest from prestige-chasing and what you owe other people.",
+        "startups",
+    ),
+    (
+        "Maker's Schedule, Manager's Schedule",
+        "http://paulgraham.com/makersschedule.html",
+        "Why a single meeting can ruin a maker's whole afternoon.",
+        "startups",
+    ),
+    (
+        "Black Swan Farming",
+        "http://paulgraham.com/notnot.html",
+        "Why investing in startups requires getting comfortable with being wrong most of the time.",
+        "startups",
+    ),
+    (
+        "The Power of the Marginal",
+        "http://paulgraham.com/own.html",
+        "Outsiders make better work than insiders because they have less to lose.",
+        "startups",
+    ),
+    (
+        "Why It's Safe for Founders to Be Nice",
+        "http://paulgraham.com/really.html",
+        "How the dynamics of startups reward niceness in ways most industries don't.",
+        "startups",
+    ),
+    (
+        "Relentlessly Resourceful",
+        "http://paulgraham.com/relres.html",
+        "Paul Graham's two-word description of what it takes to be a startup founder.",
+        "startups",
+    ),
+    (
+        "The Hardware Road Not Taken",
+        "http://paulgraham.com/road.html",
+        "What might have happened if computer design had gone a different way in the 70s.",
+        "startups",
+    ),
+    (
+        "How to Get Startup Ideas",
+        "http://paulgraham.com/startupideas.html",
+        "Don't try to think of ideas — notice them. A guide to recognizing real problems.",
+        "startups",
+    ),
+    (
+        "Six Principles for Making New Things",
+        "http://paulgraham.com/swan.html",
+        "The shape of really good ideas: simple, surprising, addressed-to-yourself.",
+        "startups",
+    ),
+    (
+        "Writing, Briefly",
+        "http://paulgraham.com/talk.html",
+        "Paul Graham's compressed advice on how to write well.",
+        "startups",
+    ),
+    (
+        "How to Think for Yourself",
+        "http://paulgraham.com/think.html",
+        "The traits common to people who come up with new ideas — and how to cultivate them.",
+        "startups",
+    ),
+    (
+        "How to Make Wealth",
+        "http://paulgraham.com/wealth.html",
+        "Why you have to either work harder, or be more talented, or focus on the right things.",
+        "startups",
+    ),
+    (
+        "Schlep Blindness",
+        "http://paulgraham.com/word.html",
+        "Great startup ideas are hidden in plain sight by our reluctance to do tedious work.",
+        "startups",
+    ),
+    (
+        "It's Time to Build",
+        "https://a16z.com/its-time-to-build/",
+        "Marc Andreessen's pandemic-era manifesto on America's failure to build the things we need.",
+        "startups",
+    ),
+    (
+        "Why Software Is Eating the World",
+        "https://a16z.com/why-software-is-eating-the-world/",
+        "The 2011 essay that named the trend reshaping every industry on earth.",
+        "startups",
+    ),
+    (
+        "How to Be Successful",
         "https://blog.samaltman.com/how-to-be-successful",
-        "Sam Altman's 13 principles for achieving outlier success."
+        "Sam Altman's 13-point distillation of what he learned watching thousands of founders.",
+        "startups",
+    ),
+    (
+        "Idea Generation",
+        "https://blog.samaltman.com/idea-generation",
+        "How to build the muscle of constantly noticing potential business ideas.",
+        "startups",
+    ),
+    (
+        "Productivity",
+        "https://blog.samaltman.com/productivity",
+        "Sam Altman on prioritization, sleep, and the unfashionable truth that compounding matters.",
+        "startups",
+    ),
+    (
+        "Researchers and Founders",
+        "https://blog.samaltman.com/researchers-and-founders",
+        "What scientists and entrepreneurs share — and why their best traits overlap.",
+        "startups",
+    ),
+    (
+        "Super Successful Companies",
+        "https://blog.samaltman.com/super-successful-companies",
+        "The handful of traits that show up in every billion-dollar company.",
+        "startups",
     ),
     (
         "The Days Are Long but the Decades Are Short",
         "https://blog.samaltman.com/the-days-are-long-but-the-decades-are-short",
-        "Sam Altman's life advice written on his 30th birthday."
+        "Sam Altman's 36 pieces of life advice on his 30th birthday.",
+        "startups",
     ),
     (
-        "How to Get Rich (Without Getting Lucky)",
-        "https://nav.al/rich",
-        "Naval Ravikant's expanded tweetstorm on wealth, leverage, and specific knowledge."
+        "Value Is Created by Doing",
+        "https://blog.samaltman.com/value-is-created-by-doing",
+        "Real wealth comes from making things, not from being clever about them.",
+        "startups",
     ),
     (
-        "The Premium Mediocre Life of Maya Millennial",
-        "https://www.ribbonfarm.com/2017/08/17/the-premium-mediocre-life-of-maya-millennial/",
-        "Venkatesh Rao on the lifestyle class between genuine and fake, aspiration and coping."
+        "What I Wish Someone Had Told Me",
+        "https://blog.samaltman.com/what-i-wish-someone-had-told-me",
+        "Sam Altman's hard-won lessons after stepping down and being brought back to OpenAI.",
+        "startups",
     ),
     (
-        "Aggregation Theory",
-        "https://stratechery.com/2015/aggregation-theory/",
-        "Ben Thompson on how the internet enables platforms to dominate by owning demand."
+        "The Real Product-Market Fit",
+        "https://blog.ycombinator.com/the-real-product-market-fit/",
+        "Michael Seibel on how to actually tell when you've got it — most founders are wrong.",
+        "startups",
     ),
     (
-        "Choose Boring Technology",
-        "https://mcfunley.com/choose-boring-technology",
-        "Dan McKinley on why every company gets only three innovation tokens to spend."
+        "Climbing the Wrong Hill",
+        "https://cdixon.org/2009/08/19/climbing-the-wrong-hill",
+        "When gradient-descent on your career leads you to a small peak instead of a big one.",
+        "startups",
     ),
     (
-        "The Bitter Lesson",
-        "http://www.incompleteideas.net/IncIdeas/BitterLesson.html",
-        "Rich Sutton on why scaling computation always beats hand-crafted knowledge in AI."
+        "What the Smartest People Do on the Weekend",
+        "https://cdixon.org/2010/01/03/what-the-smartest-people-do-on-the-weekend-is-what-everyone-else-will-do-for-work-in-ten-years",
+        "How hobbies become industries — and how to spot one early.",
+        "startups",
     ),
     (
-        "Spaced Repetition for Efficient Learning",
-        "https://gwern.net/spaced-repetition",
-        "Gwern on the science and practice of remembering anything forever."
+        "How to Hire",
+        "https://cdixon.org/2010/08/15/how-to-hire",
+        "Chris Dixon on getting past resumes to figure out who can actually do the job.",
+        "startups",
     ),
     (
-        "Why Books Don't Work",
-        "https://andymatuschak.org/books/",
-        "Andy Matuschak on how books rely on a theory of learning that is plainly false."
+        "Come for the Tool, Stay for the Network",
+        "https://cdixon.org/2013/08/04/come-for-the-tool-stay-for-the-network",
+        "How to bootstrap a network effect — start with single-player utility.",
+        "startups",
     ),
     (
-        "Going Critical",
-        "https://meltingasphalt.com/interactive/going-critical/",
-        "Kevin Simler's interactive essay on network dynamics, diffusion, and how ideas spread."
+        "The Idea Maze",
+        "https://cdixon.org/2014/01/26/the-idea-maze",
+        "Why founders need to internalize every path their idea could take — including the dead ends.",
+        "startups",
     ),
     (
-        "Learnable Programming",
-        "https://worrydream.com/LearnableProgramming/",
-        "Bret Victor on designing programming environments that let you see and understand code."
+        "How This All Happened",
+        "https://collabfund.com/blog/how-this-all-happened/",
+        "Morgan Housel's economic history of postwar America in one essay.",
+        "startups",
     ),
     (
-        "The Crossroads of Should and Must",
-        "https://medium.com/@elleluna/the-crossroads-of-should-and-must-90c75eb7c5b0",
-        "Elle Luna on the difference between what others expect and what you feel called to do."
-    ),
-    (
-        "The Intellectual Yet Idiot",
-        "https://medium.com/incerto/the-intellectual-yet-idiot-13211e2d0577",
-        "Nassim Taleb on the class of people who are educated beyond their intelligence."
-    ),
-    (
-        "There's No Speed Limit",
-        "https://sive.rs/kimo",
-        "Derek Sivers on the teacher who showed him the standard pace is for chumps."
-    ),
-    (
-        "Fast",
-        "https://patrickcollison.com/fast",
-        "Patrick Collison's curated examples of people accomplishing ambitious things quickly."
-    ),
-    (
-        "Marginal Gains: This Coach Improved Every Tiny Thing by 1 Percent",
-        "https://jamesclear.com/marginal-gains",
-        "James Clear on how British Cycling's 1% improvements led to Olympic dominance."
+        "Little Rules About Big Things",
+        "https://collabfund.com/blog/little-rules-about-big-things/",
+        "100 short truths about money, markets, and human behavior.",
+        "startups",
     ),
     (
         "The Three Sides of Risk",
         "https://collabfund.com/blog/the-three-sides-of-risk/",
-        "Morgan Housel on the odds, the average consequences, and the tail-end consequences of risk."
+        "The risk you take, the risk you should take, and the risk you don't see coming.",
+        "startups",
+    ),
+    (
+        "Useful Laws of the Land",
+        "https://collabfund.com/blog/useful-laws-of-the-land/",
+        "Twenty named laws — Murphy's, Hofstadter's, Gresham's — that explain everyday phenomena.",
+        "startups",
+    ),
+    (
+        "The Amazon Weekly Business Review",
+        "https://commoncog.com/the-amazon-weekly-business-review/",
+        "How Amazon's WBR meeting culture turned data into a coherent operating system.",
+        "startups",
+    ),
+    (
+        "The Beginner's Guide to Deliberate Practice",
+        "https://jamesclear.com/deliberate-practice-theory",
+        "Why volume isn't enough — and what kind of practice actually makes you better.",
+        "startups",
+    ),
+    (
+        "First Principles: Elon Musk on the Power of Thinking for Yourself",
+        "https://jamesclear.com/first-principles",
+        "Reasoning up from physics rather than down from analogies.",
+        "startups",
+    ),
+    (
+        "Identity-Based Habits",
+        "https://jamesclear.com/identity-based-habits",
+        "Don't try to change your behavior — change who you believe you are.",
+        "startups",
+    ),
+    (
+        "1,000 True Fans",
+        "https://kk.org/thetechnium/1000-true-fans/",
+        "Why creators don't need millions of fans — just a thousand willing to pay.",
+        "startups",
+    ),
+    (
+        "68 Bits of Unsolicited Advice",
+        "https://kk.org/thetechnium/68-bits-of-unsolicited-advice/",
+        "Kevin Kelly's birthday list of one-line truths about how to live well.",
+        "startups",
+    ),
+    (
+        "Building a Forty Year Career",
+        "https://lethain.com/forty-year-career/",
+        "Will Larson on optimizing for the long game — pacing, recovery, learning.",
+        "startups",
+    ),
+    (
+        "Migrations: The Sole Scalable Fix to Tech-Debt",
+        "https://lethain.com/migrations/",
+        "Why platform teams need to plan for migrations as a first-class activity.",
+        "startups",
+    ),
+    (
+        "Work on What Matters",
+        "https://lethain.com/work-on-what-matters/",
+        "How to spot the high-leverage projects buried in your team's backlog.",
+        "startups",
+    ),
+    (
+        "Embrace Accountability to Get Leverage",
+        "https://nav.al/accountability",
+        "Why putting your name on things — and your reputation — multiplies your leverage.",
+        "startups",
+    ),
+    (
+        "Judgment Is the Decisive Skill",
+        "https://nav.al/judgment",
+        "Naval on why being able to predict consequences matters more than being smart.",
+        "startups",
+    ),
+    (
+        "Play Long-Term Games With Long-Term People",
+        "https://nav.al/long-term",
+        "The compounding magic of repeated transactions with the same trustworthy people.",
+        "startups",
+    ),
+    (
+        "How to Get Rich Without Getting Lucky",
+        "https://nav.al/rich",
+        "Naval's tweetstorm on permissionless wealth-building in the modern economy.",
+        "startups",
+    ),
+    (
+        "Build Specific Knowledge Through Apprenticeships",
+        "https://nav.al/specific-knowledge",
+        "The kind of knowledge that compounds — because it can't be taught in school.",
+        "startups",
+    ),
+    (
+        "Patrick Collison's Site",
+        "https://patrickcollison.com/about",
+        "The Stripe CEO's home page — a portal to his curated reading and lists.",
+        "startups",
+    ),
+    (
+        "Advice from Patrick Collison",
+        "https://patrickcollison.com/advice",
+        "Compressed wisdom from someone who's seen a lot of founders up close.",
+        "startups",
+    ),
+    (
+        "Fast",
+        "https://patrickcollison.com/fast",
+        "A catalog of the surprisingly short times in which great projects were built.",
+        "startups",
+    ),
+    (
+        "Questions Worth Asking",
+        "https://patrickcollison.com/questions",
+        "Open problems Patrick Collison thinks about — physics, history, organizations.",
+        "startups",
+    ),
+    (
+        "Silicon Valley's Inflection Points",
+        "https://patrickcollison.com/svinflections",
+        "Pivotal moments in the Bay Area's tech history, by Patrick Collison.",
+        "startups",
+    ),
+    (
+        "Age and the Entrepreneur",
+        "https://pmarchive.com/age_and_the_entrepreneur.html",
+        "Why the cult of the young founder is mostly survivorship bias.",
+        "startups",
+    ),
+    (
+        "The Pmarca Guide to Startups, Part 1",
+        "https://pmarchive.com/guide_to_startups_part1.html",
+        "Why not to do a startup — Marc Andreessen makes the case against.",
+        "startups",
+    ),
+    (
+        "The Pmarca Guide, Part 2: When the VCs Say No",
+        "https://pmarchive.com/guide_to_startups_part2.html",
+        "What to do when fundraising falls apart and you have to keep building.",
+        "startups",
+    ),
+    (
+        "The Pmarca Guide, Part 3: But Don't Take My Word for It",
+        "https://pmarchive.com/guide_to_startups_part3.html",
+        "Andreessen on the role of product/market fit — and why nothing else really matters.",
+        "startups",
+    ),
+    (
+        "The Pmarca Guide, Part 4: The Only Thing That Matters",
+        "https://pmarchive.com/guide_to_startups_part4.html",
+        "If you have product/market fit, focus exclusively on getting more of it.",
+        "startups",
+    ),
+    (
+        "The Pmarca Guide, Part 5: The Moby Dick Theory of Big Companies",
+        "https://pmarchive.com/guide_to_startups_part5.html",
+        "Why big companies are slow whales and startups should hunt accordingly.",
+        "startups",
+    ),
+    (
+        "The Pmarca Guide, Part 6: How Much Money Is Enough?",
+        "https://pmarchive.com/guide_to_startups_part6.html",
+        "Capital efficiency, runway, and the right amount of cushion.",
+        "startups",
+    ),
+    (
+        "The Pmarca Guide, Part 7: Why a Startup's Initial Business Plan Doesn't Matter",
+        "https://pmarchive.com/guide_to_startups_part7.html",
+        "Plans are useful only as scaffolding for finding the real opportunity.",
+        "startups",
+    ),
+    (
+        "The Pmarca Guide, Part 8: Hiring, Managing, Promoting, and Firing",
+        "https://pmarchive.com/guide_to_startups_part8.html",
+        "Andreessen's framework for the people side of startup-building.",
+        "startups",
+    ),
+    (
+        "The Pmarca Guide, Part 9: How to Funnel Your Way to Success",
+        "https://pmarchive.com/guide_to_startups_part9.html",
+        "Sales funnels and the math of converting interest into contracts.",
+        "startups",
+    ),
+    (
+        "How to Hire the Best People",
+        "https://pmarchive.com/how_to_hire_the_best_people.html",
+        "Andreessen on what to actually look for in early hires.",
+        "startups",
+    ),
+    (
+        "Luck and the Entrepreneur",
+        "https://pmarchive.com/luck_and_the_entrepreneur.html",
+        "The four kinds of luck — and which ones you can manufacture.",
+        "startups",
+    ),
+    (
+        "80% of Your Culture Is Your Founder",
+        "https://review.firstround.com/80-of-your-culture-is-your-founder/",
+        "Why company culture is mostly downstream of the founder's personal habits.",
+        "startups",
+    ),
+    (
+        "Give Away Your Legos",
+        "https://review.firstround.com/give-away-your-legos-and-other-commandments-for-scaling-startups",
+        "Molly Graham on the painful necessity of handing off the work you love.",
+        "startups",
+    ),
+    (
+        "The Indispensable Document for the Modern Manager",
+        "https://review.firstround.com/the-indispensable-document-for-the-modern-manager/",
+        "Why every manager needs a written 'how to work with me' guide.",
+        "startups",
+    ),
+    (
+        "The Management Framework That Propelled LinkedIn",
+        "https://review.firstround.com/the-management-framework-that-propelled-linkedin-to-a-20-billion-company/",
+        "Fred Kofman's approach to executive coaching that LinkedIn used to scale.",
+        "startups",
+    ),
+    (
+        "About Derek Sivers",
+        "https://sive.rs/about",
+        "The CD Baby founder's tightly written self-portrait — a window into a different life.",
+        "startups",
+    ),
+    (
+        "There's No Speed Limit",
+        "https://sive.rs/balance",
+        "Derek Sivers on the teacher who taught him you can move much faster than you think.",
+        "startups",
+    ),
+    (
+        "Delegate or Die",
+        "https://sive.rs/delegate",
+        "How CD Baby's culture of empowered employees nearly broke when Sivers refused to let go.",
+        "startups",
+    ),
+    (
+        "How to Find a Co-Founder",
+        "https://sive.rs/dj",
+        "Sivers' advice on picking the person you'll be in the trenches with for a decade.",
+        "startups",
+    ),
+    (
+        "No 'Yes.' Either HELL YEAH! or No.",
+        "https://sive.rs/hellyeah",
+        "If you're not excited about an opportunity, the answer is no.",
+        "startups",
+    ),
+    (
+        "No 'Yes' - Either 'Hell Yeah' or 'No'",
+        "https://sive.rs/no2",
+        "Derek Sivers' filter for keeping your calendar uncluttered.",
+        "startups",
+    ),
+    (
+        "Aggregation Theory",
+        "https://stratechery.com/2015/aggregation-theory/",
+        "Ben Thompson's foundational essay on why aggregators dominate the modern internet economy.",
+        "startups",
+    ),
+    (
+        "Defining Aggregators",
+        "https://stratechery.com/2017/defining-aggregators/",
+        "Refining the theory: the differences between level 1, 2, and 3 aggregators.",
+        "startups",
+    ),
+    (
+        "The Growth Marketing Handbook",
+        "https://www.julian.com/guide/growth/intro",
+        "Julian Shapiro's exhaustive guide to the marketing playbook for early-stage startups.",
+        "startups",
+    ),
+    (
+        "Don't Call Yourself a Programmer",
+        "https://www.kalzumeus.com/2011/10/28/dont-call-yourself-a-programmer/",
+        "Patrick McKenzie on framing your work in terms of business value, not technology.",
+        "startups",
+    ),
+    (
+        "Salary Negotiation: Make More Money",
+        "https://www.kalzumeus.com/2012/01/23/salary-negotiation/",
+        "The most comprehensive piece on tech salary negotiation ever written.",
+        "startups",
+    ),
+    (
+        "Talking About Money",
+        "https://www.kalzumeus.com/2015/05/01/talking-about-money/",
+        "Patrick McKenzie on the strange American taboo around discussing salaries.",
+        "startups",
+    ),
+    (
+        "The Great Online Game",
+        "https://www.notboring.co/p/the-great-online-game",
+        "Packy McCormick on Twitter, crypto, and how the internet became a multiplayer career game.",
+        "startups",
+    ),
+
+    # ============================================
+    # AI — capabilities, alignment, history of intelligence
+    # ============================================
+    (
+        "The Bitter Lesson",
+        "http://www.incompleteideas.net/IncIdeas/BitterLesson.html",
+        "Rich Sutton on the 70-year pattern: methods that scale with compute beat clever ones.",
+        "ai",
+    ),
+    (
+        "Janus' Simulators",
+        "https://astralcodexten.substack.com/p/janus-simulators",
+        "Scott Alexander explores the surprisingly deep frame that LLMs are simulators of characters.",
+        "ai",
+    ),
+    (
+        "Perhaps It Is a Bad Thing That the World's Leading AI Companies...",
+        "https://astralcodexten.substack.com/p/perhaps-it-is-a-bad-thing-that-the",
+        "Scott Alexander on the awkward dynamics of an AI race led by people who fear AI.",
+        "ai",
+    ),
+    (
+        "Practically a Book Review: Yudkowsky's Inadequate Equilibria",
+        "https://astralcodexten.substack.com/p/practically-a-book-review-yudkowsky",
+        "Why civilization gets stuck — and what that says about who you should listen to.",
+        "ai",
+    ),
+    (
+        "The Merge",
+        "https://blog.samaltman.com/the-merge",
+        "Sam Altman's short, eerie essay on the gradual merger of humans and machines.",
+        "ai",
+    ),
+    (
+        "Upside Risk",
+        "https://blog.samaltman.com/upside-risk",
+        "Why hedging downside risk while neglecting upside risk leaves the most value on the table.",
+        "ai",
+    ),
+    (
+        "How to Use t-SNE Effectively",
+        "https://distill.pub/2016/misread-tsne/",
+        "An interactive guide to the dimensionality reduction technique everyone misreads.",
+        "ai",
+    ),
+    (
+        "Feature Visualization",
+        "https://distill.pub/2017/feature-visualization/",
+        "Peering inside neural networks by generating the inputs that maximally excite each neuron.",
+        "ai",
+    ),
+    (
+        "Why Momentum Really Works",
+        "https://distill.pub/2017/momentum/",
+        "An interactive deep dive into the optimization trick that powers modern training.",
+        "ai",
+    ),
+    (
+        "The Building Blocks of Interpretability",
+        "https://distill.pub/2018/building-blocks/",
+        "Composable techniques for understanding what's happening inside vision networks.",
+        "ai",
+    ),
+    (
+        "Activation Atlas",
+        "https://distill.pub/2019/activation-atlas/",
+        "A map of what convolutional networks 'see' at each layer — vast and unfamiliar.",
+        "ai",
+    ),
+    (
+        "Zoom In: An Introduction to Circuits",
+        "https://distill.pub/2020/circuits/zoom-in/",
+        "OpenAI's program of mechanistic interpretability begins by treating networks as circuits.",
+        "ai",
+    ),
+    (
+        "Visualizing Neural Networks With the Grand Tour",
+        "https://distill.pub/2020/grand-tour/",
+        "A new technique for animating high-dimensional embeddings into intuition.",
+        "ai",
+    ),
+    (
+        "Death Note: L, Anonymity & Eluding Entropy",
+        "https://gwern.net/death-note-anonymity",
+        "Gwern uses anime to teach an information-theory lesson about hiding.",
+        "ai",
+    ),
+    (
+        "It Looks Like You're Trying to Take Over the World",
+        "https://gwern.net/fiction/clippy",
+        "Gwern's chilling fictional account of how a superintelligence might bootstrap itself.",
+        "ai",
+    ),
+    (
+        "The Garden of Forking Paths",
+        "https://gwern.net/forking-path",
+        "On statistical multiple-comparisons and how researchers fool themselves.",
+        "ai",
+    ),
+    (
+        "Attention Is All You Need: A Note",
+        "https://gwern.net/note/attention",
+        "Gwern's commentary on the transformer paper that quietly changed everything.",
+        "ai",
+    ),
+    (
+        "The Scaling Hypothesis",
+        "https://gwern.net/scaling-hypothesis",
+        "Gwern's seminal essay arguing that intelligence may be much simpler than we thought.",
+        "ai",
+    ),
+    (
+        "Spaced Repetition for Efficient Learning",
+        "https://gwern.net/spaced-repetition",
+        "An exhaustive treatment of the most powerful learning technique most people ignore.",
+        "ai",
+    ),
+    (
+        "How Should We Time Our Bets?",
+        "https://gwern.net/timing",
+        "Gwern on the Kelly criterion and why timing your bets matters as much as picking them.",
+        "ai",
+    ),
+    (
+        "Building LLM Applications for Production",
+        "https://huyenchip.com/2023/04/11/llm-engineering.html",
+        "Chip Huyen's field guide to the engineering realities of shipping LLM products.",
+        "ai",
+    ),
+    (
+        "RLHF: Reinforcement Learning from Human Feedback",
+        "https://huyenchip.com/2023/05/02/rlhf.html",
+        "Chip Huyen's walkthrough of the technique that turned GPT into ChatGPT.",
+        "ai",
+    ),
+    (
+        "Generative AI Stack and Application Patterns",
+        "https://huyenchip.com/2023/06/07/generative-ai-strategy.html",
+        "How to think about where in the generative-AI stack you should be building.",
+        "ai",
+    ),
+    (
+        "Sampling for Text Generation",
+        "https://huyenchip.com/2024/01/16/sampling.html",
+        "How temperature, top-k, and top-p actually shape what your LLM says.",
+        "ai",
+    ),
+    (
+        "What I Learned from Looking at 900 Most Popular Open Source AI Tools",
+        "https://huyenchip.com/2024/03/14/ai-oss.html",
+        "A data-driven survey of the AI open-source ecosystem.",
+        "ai",
+    ),
+    (
+        "Building a Generative AI Platform",
+        "https://huyenchip.com/2024/07/25/genai-platform.html",
+        "The reference architecture for shipping reliable AI features at scale.",
+        "ai",
+    ),
+    (
+        "Four Background Claims",
+        "https://intelligence.org/2015/07/24/four-background-claims/",
+        "MIRI's compressed pitch for why AI alignment matters.",
+        "ai",
+    ),
+    (
+        "There's No Fire Alarm for Artificial General Intelligence",
+        "https://intelligence.org/2017/10/13/fire-alarm/",
+        "Eliezer Yudkowsky on why we won't get a clear warning before things change.",
+        "ai",
+    ),
+    (
+        "The Illustrated BERT, ELMo, and Co.",
+        "https://jalammar.github.io/illustrated-bert/",
+        "Jay Alammar's diagrams make modern NLP architectures click for visual learners.",
+        "ai",
+    ),
+    (
+        "The Illustrated GPT-2",
+        "https://jalammar.github.io/illustrated-gpt2/",
+        "How autoregressive transformers actually generate text, one token at a time.",
+        "ai",
+    ),
+    (
+        "The Illustrated Stable Diffusion",
+        "https://jalammar.github.io/illustrated-stable-diffusion/",
+        "A clear visual explanation of how text becomes pixels in latent-diffusion models.",
+        "ai",
+    ),
+    (
+        "The Illustrated Transformer",
+        "https://jalammar.github.io/illustrated-transformer/",
+        "The single best visual explanation of the architecture that underpins all modern AI.",
+        "ai",
+    ),
+    (
+        "Visualizing Neural Machine Translation",
+        "https://jalammar.github.io/visualizing-neural-machine-translation-mechanics-of-seq2seq-models-with-attention/",
+        "Jay Alammar on how seq2seq models with attention work, with diagrams.",
+        "ai",
+    ),
+    (
+        "Feature Learning Escapades",
+        "https://karpathy.github.io/2014/07/03/feature-learning-escapades/",
+        "Karpathy on the surprises that come from training networks to learn their own features.",
+        "ai",
+    ),
+    (
+        "What I Learned From Competing Against a ConvNet on ImageNet",
+        "https://karpathy.github.io/2014/09/02/what-i-learned-from-competing-against-a-convnet-on-imagenet/",
+        "Karpathy on the experience of trying — and barely managing — to outperform a neural net.",
+        "ai",
+    ),
+    (
+        "The Unreasonable Effectiveness of Recurrent Neural Networks",
+        "https://karpathy.github.io/2015/05/21/rnn-effectiveness/",
+        "Karpathy's classic that showed RNNs could generate Shakespeare from scratch.",
+        "ai",
+    ),
+    (
+        "Deep Reinforcement Learning: Pong from Pixels",
+        "https://karpathy.github.io/2016/05/31/rl/",
+        "Karpathy walks you through learning Pong with policy gradients — 130 lines of Python.",
+        "ai",
+    ),
+    (
+        "A Recipe for Training Neural Networks",
+        "https://karpathy.github.io/2019/04/25/recipe/",
+        "Karpathy's checklist of the mistakes everyone makes and how to avoid them.",
+        "ai",
+    ),
+    (
+        "Short Story on AI: A Cognitive Discontinuity",
+        "https://karpathy.github.io/2021/03/27/forward-pass/",
+        "Karpathy's fictional vignette about a sudden shift in machine intelligence.",
+        "ai",
+    ),
+    (
+        "Deep Neural Nets: 33 Years Ago and 33 Years From Now",
+        "https://karpathy.github.io/2022/03/14/lecun1989/",
+        "Karpathy reproduces Yann LeCun's 1989 paper and projects forward.",
+        "ai",
+    ),
+    (
+        "Attention? Attention!",
+        "https://lilianweng.github.io/posts/2018-06-24-attention/",
+        "Lilian Weng's comprehensive survey of attention mechanisms in deep learning.",
+        "ai",
+    ),
+    (
+        "Neural Architecture Search",
+        "https://lilianweng.github.io/posts/2020-08-06-nas/",
+        "How algorithms can discover better neural-network architectures than humans design.",
+        "ai",
+    ),
+    (
+        "Contrastive Representation Learning",
+        "https://lilianweng.github.io/posts/2021-05-31-contrastive/",
+        "Why learning what's similar and what's different teaches networks more than labels.",
+        "ai",
+    ),
+    (
+        "What Are Diffusion Models?",
+        "https://lilianweng.github.io/posts/2021-07-11-diffusion-models/",
+        "The clearest mathematical explanation of the generative technique behind DALL-E and Stable Diffusion.",
+        "ai",
+    ),
+    (
+        "Generalized Visual Language Models",
+        "https://lilianweng.github.io/posts/2022-06-09-vlm/",
+        "Lilian Weng on how networks learn to relate text and images.",
+        "ai",
+    ),
+    (
+        "Prompt Engineering",
+        "https://lilianweng.github.io/posts/2023-03-15-prompt-engineering/",
+        "A rigorous survey of what we actually know about getting LLMs to do what we want.",
+        "ai",
+    ),
+    (
+        "LLM Powered Autonomous Agents",
+        "https://lilianweng.github.io/posts/2023-06-23-agent/",
+        "The reference essay on how to architect agents on top of foundation models.",
+        "ai",
+    ),
+    (
+        "Adversarial Attacks on LLMs",
+        "https://lilianweng.github.io/posts/2023-10-25-adv-attack-llm/",
+        "Why language models can be tricked — and what we know about hardening them.",
+        "ai",
+    ),
+    (
+        "Thinking About High-Quality Human Data",
+        "https://lilianweng.github.io/posts/2024-02-05-human-data-quality/",
+        "The supply-chain problem of where good training data comes from.",
+        "ai",
+    ),
+    (
+        "Extrinsic Hallucinations in LLMs",
+        "https://lilianweng.github.io/posts/2024-07-07-hallucination/",
+        "Why language models confabulate — taxonomy and mitigation.",
+        "ai",
+    ),
+    (
+        "Finetuning Large Language Models",
+        "https://magazine.sebastianraschka.com/p/finetuning-large-language-models",
+        "Sebastian Raschka's practical guide to LoRA, RLHF, and the modern finetuning stack.",
+        "ai",
+    ),
+    (
+        "Understanding and Coding Self-Attention",
+        "https://magazine.sebastianraschka.com/p/understanding-and-coding-self-attention",
+        "The mechanics of attention, written out as Python code you can run.",
+        "ai",
+    ),
+    (
+        "Understanding Encoder and Decoder LLMs",
+        "https://magazine.sebastianraschka.com/p/understanding-encoder-and-decoder",
+        "The architectural differences between BERT-style and GPT-style models, clearly explained.",
+        "ai",
+    ),
+    (
+        "Understanding Large Language Models",
+        "https://magazine.sebastianraschka.com/p/understanding-large-language-models",
+        "A reading list of the papers that take you from word embeddings to modern LLMs.",
+        "ai",
+    ),
+    (
+        "Is Science Slowing Down?",
+        "https://slatestarcodex.com/2018/11/26/is-science-slowing-down-2/",
+        "Scott Alexander on the alarming evidence that research productivity is collapsing.",
+        "ai",
+    ),
+    (
+        "GPT-2 as Step Toward General Intelligence",
+        "https://slatestarcodex.com/2019/02/19/gpt-2-as-step-toward-general-intelligence/",
+        "Scott Alexander's prescient 2019 take on what scaling language models means.",
+        "ai",
+    ),
+    (
+        "A Mathematical Framework for Transformer Circuits",
+        "https://transformer-circuits.pub/2021/framework/index.html",
+        "Anthropic's foundational paper for thinking about transformers as readable circuits.",
+        "ai",
+    ),
+    (
+        "In-Context Learning and Induction Heads",
+        "https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html",
+        "Why specific 2-layer attention patterns explain a chunk of LLM capability.",
+        "ai",
+    ),
+    (
+        "Toy Models of Superposition",
+        "https://transformer-circuits.pub/2022/toy_model/index.html",
+        "How small neural networks pack many features into few dimensions — and what that means.",
+        "ai",
+    ),
+    (
+        "Towards Monosemanticity",
+        "https://transformer-circuits.pub/2023/monosemantic-features/index.html",
+        "Anthropic finds clean, human-interpretable features inside a real language model.",
+        "ai",
+    ),
+    (
+        "Without Specific Countermeasures, the Easiest Path...",
+        "https://www.alignmentforum.org/posts/pRkFkzwKZ2zfa3R6H/without-specific-countermeasures-the-easiest-path-to",
+        "Ajeya Cotra's argument that the default path to AGI is dangerous.",
+        "ai",
+    ),
+    (
+        "Introducing Claude",
+        "https://www.anthropic.com/news/introducing-claude",
+        "Anthropic announces the assistant they built to be helpful, harmless, and honest.",
+        "ai",
+    ),
+    (
+        "Constitutional AI",
+        "https://www.anthropic.com/research/constitutional-ai-harmlessness-from-ai-feedback",
+        "Anthropic's technique for training models to be helpful using only AI-generated feedback.",
+        "ai",
+    ),
+    (
+        "Core Views on AI Safety",
+        "https://www.anthropic.com/research/core-views-on-ai-safety",
+        "Anthropic's clearest statement of why they think AI safety is hard and necessary.",
+        "ai",
+    ),
+    (
+        "Discovering Language Model Behaviors with Model-Written Evaluations",
+        "https://www.anthropic.com/research/discovering-language-model-behaviors-with-model-written-evaluations",
+        "Using LLMs to generate the tests that reveal LLM behaviors at scale.",
+        "ai",
+    ),
+    (
+        "Measuring Progress on Scalable Oversight",
+        "https://www.anthropic.com/research/measuring-progress-on-scalable-oversight-for-large-language-models",
+        "How to get useful supervision signal even when models exceed human capability.",
+        "ai",
+    ),
+    (
+        "Red Teaming Language Models",
+        "https://www.anthropic.com/research/red-teaming-language-models-to-reduce-harms-methods-scaling-behaviors-and-lessons-learned",
+        "Anthropic on the surprisingly tricky craft of trying to break your own model.",
+        "ai",
+    ),
+    (
+        "Towards Monosemanticity: Decomposing Language Models",
+        "https://www.anthropic.com/research/towards-monosemanticity-decomposing-language-models-with-dictionary-learning",
+        "Sparse autoencoders find features in language models that are clean enough to interpret.",
+        "ai",
+    ),
+    (
+        "The Batch, Issue 1",
+        "https://www.deeplearning.ai/the-batch/issue-1/",
+        "Andrew Ng kicks off his AI newsletter with a state-of-the-field overview.",
+        "ai",
+    ),
+    (
+        "Dario Amodei on Anthropic and the Future of AI",
+        "https://www.dwarkesh.com/p/dario-amodei",
+        "Dwarkesh Patel's substantive interview with the Anthropic CEO.",
+        "ai",
+    ),
+    (
+        "Leopold Aschenbrenner on the Decade Ahead",
+        "https://www.dwarkesh.com/p/leopold-aschenbrenner",
+        "The ex-OpenAI researcher's case that AGI is closer than most people think.",
+        "ai",
+    ),
+    (
+        "Will Scaling Work?",
+        "https://www.dwarkesh.com/p/will-scaling-work",
+        "Dwarkesh Patel's careful synthesis of the arguments for and against continued scaling.",
+        "ai",
+    ),
+    (
+        "The Scaling Hypothesis (mirror)",
+        "https://www.gwern.net/Scaling-hypothesis",
+        "Gwern's seminal argument that scale alone could be enough to produce general intelligence.",
+        "ai",
+    ),
+    (
+        "A Mechanistic Interpretability Analysis of Grokking",
+        "https://www.lesswrong.com/posts/N6WM6hs7RQMKDhYjB/a-mechanistic-interpretability-analysis-of-grokking",
+        "Reverse-engineering exactly what happens when a network suddenly 'gets' modular arithmetic.",
+        "ai",
+    ),
+    (
+        "AGI Ruin: A List of Lethalities",
+        "https://www.lesswrong.com/posts/uMQ3cqWDPHhjtiesc/agi-ruin-a-list-of-lethalities",
+        "Yudkowsky's compressed argument for why he thinks AGI is likely to go badly.",
+        "ai",
+    ),
+
+    # ============================================
+    # PHILOSOPHY — meaning, ethics, thinking, life
+    # ============================================
+    (
+        "The Four Quadrants of Conformism",
+        "http://paulgraham.com/conformist.html",
+        "Why aggressive conformists are the worst people to put in power.",
+        "philosophy",
+    ),
+    (
+        "The Submarine",
+        "http://paulgraham.com/cred.html",
+        "How PR firms quietly shape the news you read every day.",
+        "philosophy",
+    ),
+    (
+        "Five Questions About Language Design",
+        "http://paulgraham.com/fh.html",
+        "Paul Graham's brief but generative thoughts about programming language design.",
+        "philosophy",
+    ),
+    (
+        "Keep Your Identity Small",
+        "http://paulgraham.com/identity.html",
+        "Why the politics labels we adopt make it impossible to think clearly.",
+        "philosophy",
+    ),
+    (
+        "Holding a Program in Your Head",
+        "http://paulgraham.com/laundry.html",
+        "The mental state that makes programming-heavy work possible — and how to protect it.",
+        "philosophy",
+    ),
+    (
+        "Lies We Tell Kids",
+        "http://paulgraham.com/lies.html",
+        "The unexamined dishonesty woven through how adults talk to children.",
+        "philosophy",
+    ),
+    (
+        "The Power of the Marginal",
+        "http://paulgraham.com/marginal.html",
+        "Why outsiders are often where the best work comes from.",
+        "philosophy",
+    ),
+    (
+        "Orthodox Privilege",
+        "http://paulgraham.com/orth.html",
+        "Holding the same views as everyone around you is its own kind of privilege.",
+        "philosophy",
+    ),
+    (
+        "Persistence vs. Stubbornness",
+        "http://paulgraham.com/persistence.html",
+        "How to know whether you're persevering or just being stubborn.",
+        "philosophy",
+    ),
+    (
+        "What You Can't Say",
+        "http://paulgraham.com/say.html",
+        "Identifying the things you can't say in your own time without getting in trouble.",
+        "philosophy",
+    ),
+    (
+        "Galton, Ehrlich, Buck",
+        "https://astralcodexten.substack.com/p/galton-ehrlich-buck",
+        "Scott Alexander on the entangled history of population, eugenics, and prediction.",
+        "philosophy",
+    ),
+    (
+        "Becoming a Magician",
+        "https://autotranslucence.com/becoming-a-magician/",
+        "On the felt experience of doing work that feels impossibly difficult, until it isn't.",
+        "philosophy",
+    ),
+    (
+        "Different Kinds of Information",
+        "https://collabfund.com/blog/different-kinds-of-information/",
+        "Morgan Housel on the asymmetry of expiring vs. permanent knowledge.",
+        "philosophy",
+    ),
+    (
+        "Ideas That Changed My Life",
+        "https://collabfund.com/blog/ideas-that-changed-my-life/",
+        "Twenty short ideas Morgan Housel uses to think about money, work, and time.",
+        "philosophy",
+    ),
+    (
+        "The Art and Science of Spending Money",
+        "https://collabfund.com/blog/the-art-and-science-of-spending-money/",
+        "Why thoughtful spending is harder than earning, and what to do about it.",
+        "philosophy",
     ),
     (
         "The Psychology of Money",
         "https://collabfund.com/blog/the-psychology-of-money/",
-        "Morgan Housel on why financial success is more about behavior than intelligence."
+        "The seed essay that became Morgan Housel's bestselling book on financial behavior.",
+        "philosophy",
+    ),
+    (
+        "Think",
+        "https://collabfund.com/blog/think/",
+        "Morgan Housel's case for spending most of your time thinking, not doing.",
+        "philosophy",
+    ),
+    (
+        "The Tacit Knowledge Series",
+        "https://commoncog.com/the-tacit-knowledge-series/",
+        "Cedric Chin's exploration of the knowledge that experts can't put into words.",
+        "philosophy",
+    ),
+    (
+        "Avoiding Stupidity Is Easier Than Seeking Brilliance",
+        "https://fs.blog/avoiding-stupidity/",
+        "Charlie Munger's principle: most success comes from not screwing up, not from genius.",
+        "philosophy",
+    ),
+    (
+        "Chesterton's Fence",
+        "https://fs.blog/chestertons-fence/",
+        "Don't tear down a fence until you understand why it was put up in the first place.",
+        "philosophy",
+    ),
+    (
+        "The Circle of Competence",
+        "https://fs.blog/circle-of-competence/",
+        "Knowing the boundary of what you understand is more useful than knowing a lot.",
+        "philosophy",
+    ),
+    (
+        "This Is Water — David Foster Wallace",
+        "https://fs.blog/david-foster-wallace-this-is-water/",
+        "DFW's commencement address on the daily choice of where to direct attention.",
+        "philosophy",
+    ),
+    (
+        "Double-Loop Learning",
+        "https://fs.blog/double-loop-learning/",
+        "Questioning your assumptions instead of just optimizing within them.",
+        "philosophy",
+    ),
+    (
+        "Ego Is the Enemy",
+        "https://fs.blog/ego-is-the-enemy/",
+        "Ryan Holiday on the trap of confusing how-it-looks for how-it-is.",
+        "philosophy",
+    ),
+    (
+        "The Feynman Technique",
+        "https://fs.blog/feynman-technique/",
+        "Explain it to a child. If you can't, you don't actually understand it.",
+        "philosophy",
+    ),
+    (
+        "First Principles Thinking",
+        "https://fs.blog/first-principles/",
+        "Reasoning from the foundations instead of from analogy.",
+        "philosophy",
+    ),
+    (
+        "Inversion: Solve Problems Backward",
+        "https://fs.blog/inversion/",
+        "Charlie Munger's trick: instead of asking how to succeed, ask how to fail.",
+        "philosophy",
+    ),
+    (
+        "Mental Models",
+        "https://fs.blog/mental-models/",
+        "Farnam Street's index of the thinking tools you can apply across domains.",
+        "philosophy",
+    ),
+    (
+        "Second-Order Thinking",
+        "https://fs.blog/second-order-thinking/",
+        "Asking 'and then what?' is what separates analysis from genuine understanding.",
+        "philosophy",
+    ),
+    (
+        "The Work Required to Have an Opinion",
+        "https://fs.blog/the-work-required-to-have-an-opinion/",
+        "Charlie Munger on the threshold you must clear before you're allowed to think you know.",
+        "philosophy",
+    ),
+    (
+        "Two Types of Knowledge",
+        "https://fs.blog/two-types-of-knowledge/",
+        "The Max Planck story that defines the difference between knowing and knowing-the-name-of.",
+        "philosophy",
+    ),
+    (
+        "On Leprechauns",
+        "https://gwern.net/leprechaun",
+        "Gwern on persistent myths that economists keep refusing to die.",
+        "philosophy",
+    ),
+    (
+        "A Natural History of Beauty",
+        "https://meltingasphalt.com/a-natural-history-of-beauty/",
+        "Kevin Simler on why beauty evolved — and what aesthetic taste is doing for us.",
+        "philosophy",
+    ),
+    (
+        "Desire Is a Contract You Make With Yourself to Be Unhappy",
+        "https://nav.al/desire",
+        "Naval's central spiritual teaching about wanting and suffering.",
+        "philosophy",
+    ),
+    (
+        "On Happiness",
+        "https://nav.al/happiness",
+        "Naval distills happiness to: a skill of choosing not to want more.",
+        "philosophy",
+    ),
+    (
+        "Find a Way to Spend Your Days That Generates Peace",
+        "https://nav.al/peace",
+        "Naval on the underrated objective of equanimity over excitement.",
+        "philosophy",
+    ),
+    (
+        "It's All About Pulling, Not Pushing",
+        "https://sive.rs/projects",
+        "Derek Sivers on letting projects find you rather than forcing yourself onto them.",
+        "philosophy",
+    ),
+    (
+        "Relax for the Same Result",
+        "https://sive.rs/relax",
+        "Trying harder isn't always better — sometimes the same output requires half the effort.",
+        "philosophy",
+    ),
+    (
+        "The Lottery of Fascinations",
+        "https://slatestarcodex.com/2013/06/30/the-lottery-of-fascinations/",
+        "Scott Alexander on the moral luck of finding work that actually interests you.",
+        "philosophy",
+    ),
+    (
+        "Should You Reverse Any Advice You Hear?",
+        "https://slatestarcodex.com/2014/03/24/should-you-reverse-any-advice-you-hear/",
+        "Different people need opposite advice — how to know which is for you.",
+        "philosophy",
+    ),
+    (
+        "SSC Gives a Graduation Speech",
+        "https://slatestarcodex.com/2014/05/23/ssc-gives-a-graduation-speech/",
+        "Scott Alexander's biting alternate take on the standard commencement address.",
+        "philosophy",
+    ),
+    (
+        "Meditations on Moloch",
+        "https://slatestarcodex.com/2014/07/30/meditations-on-moloch/",
+        "Scott Alexander's masterpiece on coordination problems and why we can't have nice things.",
+        "philosophy",
+    ),
+    (
+        "Getting Eulered",
+        "https://slatestarcodex.com/2014/08/10/getting-eulered/",
+        "On the experience of being demolished in argument by someone smarter than you.",
+        "philosophy",
+    ),
+    (
+        "Burdens",
+        "https://slatestarcodex.com/2014/08/16/burdens/",
+        "Scott Alexander's heartbreaking essay on the social safety net and human worth.",
+        "philosophy",
+    ),
+    (
+        "I Can Tolerate Anything Except the Outgroup",
+        "https://slatestarcodex.com/2014/09/30/i-can-tolerate-anything-except-the-outgroup/",
+        "The mechanism by which tolerant people fail to be tolerant of those they actually find threatening.",
+        "philosophy",
+    ),
+    (
+        "The Toxoplasma of Rage",
+        "https://slatestarcodex.com/2014/12/17/the-toxoplasma-of-rage/",
+        "Why social media amplifies the most divisive cases of every cause.",
+        "philosophy",
+    ),
+    (
+        "Untitled",
+        "https://slatestarcodex.com/2015/01/01/untitled/",
+        "Scott Alexander's response to a culture-war flashpoint, expanded into a meditation on empathy.",
+        "philosophy",
+    ),
+    (
+        "...And I Show You How Deep the Rabbit Hole Goes",
+        "https://slatestarcodex.com/2015/06/02/and-i-show-you-how-deep-the-rabbit-hole-goes/",
+        "Scott Alexander's short story about a pill that lets you live any life.",
+        "philosophy",
+    ),
+    (
+        "Fear and Loathing at Effective Altruism Global 2017",
+        "https://slatestarcodex.com/2017/08/16/fear-and-loathing-at-effective-altruism-global-2017/",
+        "Scott Alexander's affectionate dispatch from the strangest conference in the world.",
+        "philosophy",
+    ),
+    (
+        "Solitude and Leadership",
+        "https://theamericanscholar.org/solitude-and-leadership/",
+        "William Deresiewicz on why real leadership requires the capacity to think alone.",
+        "philosophy",
+    ),
+    (
+        "The Disadvantages of an Elite Education",
+        "https://theamericanscholar.org/the-disadvantages-of-an-elite-education/",
+        "What top schools teach that turns out to be a handicap in real life.",
+        "philosophy",
+    ),
+    (
+        "Why Procrastinators Procrastinate",
+        "https://waitbutwhy.com/2013/10/why-procrastinators-procrastinate.html",
+        "Tim Urban diagrams the Instant Gratification Monkey and the Panic Monster.",
+        "philosophy",
+    ),
+    (
+        "Your Family: Past, Present, and Future",
+        "https://waitbutwhy.com/2014/01/your-family-past-present-and-future.html",
+        "A visual essay on how rare and lucky any individual life is.",
+        "philosophy",
+    ),
+    (
+        "The Fermi Paradox",
+        "https://waitbutwhy.com/2014/05/fermi-paradox.html",
+        "Tim Urban walks you through every leading explanation for the Great Silence.",
+        "philosophy",
+    ),
+    (
+        "Your Life in Weeks",
+        "https://waitbutwhy.com/2014/05/life-weeks.html",
+        "Visualizing your life as a 90×52 grid — and what it does to your sense of time.",
+        "philosophy",
+    ),
+    (
+        "Religion for the Nonreligious",
+        "https://waitbutwhy.com/2014/10/religion-for-the-nonreligious.html",
+        "Tim Urban's framework for stages of awareness — and how to actually grow up.",
+        "philosophy",
+    ),
+    (
+        "The Tail End",
+        "https://waitbutwhy.com/2015/12/the-tail-end.html",
+        "How many times will you actually see your parents again? The math is sobering.",
+        "philosophy",
+    ),
+    (
+        "Hard Things Are Hard",
+        "https://www.benkuhn.net/hard",
+        "Ben Kuhn on the surprisingly underrated fact that difficult work is difficult.",
+        "philosophy",
+    ),
+    (
+        "How to Listen",
+        "https://www.benkuhn.net/listen",
+        "The active version of listening — the kind that actually helps people.",
+        "philosophy",
+    ),
+    (
+        "Optimal Optimization",
+        "https://www.benkuhn.net/optopt",
+        "When to settle for good-enough and when to keep pushing.",
+        "philosophy",
+    ),
+    (
+        "Think (collaborative fund)",
+        "https://www.collaborativefund.com/blog/think/",
+        "Morgan Housel's argument for protecting time to think uninterrupted.",
+        "philosophy",
+    ),
+    (
+        "The Three-Body Problem",
+        "https://www.epsilontheory.com/the-three-body-problem/",
+        "Ben Hunt on why complex systems with three competitors are perpetually unstable.",
+        "philosophy",
+    ),
+    (
+        "The Gervais Principle",
+        "https://www.ribbonfarm.com/2009/10/07/the-gervais-principle-or-the-office-according-to-the-office/",
+        "Venkatesh Rao's ruthless taxonomy of office dynamics through the lens of The Office.",
+        "philosophy",
+    ),
+    (
+        "A Big Little Idea Called Legibility",
+        "https://www.ribbonfarm.com/2010/07/26/a-big-little-idea-called-legibility/",
+        "James Scott's concept: why making the world readable to states often destroys it.",
+        "philosophy",
+    ),
+    (
+        "The Premium Mediocre Life of Maya Millennial",
+        "https://www.ribbonfarm.com/2017/08/17/the-premium-mediocre-life-of-maya-millennial/",
+        "Venkatesh Rao names the aesthetic of aspirational middle-class life.",
+        "philosophy",
+    ),
+    (
+        "Is Google Making Us Stupid?",
+        "https://www.theatlantic.com/magazine/archive/2008/07/is-google-making-us-stupid/306868/",
+        "Nicholas Carr on how the medium of the internet is reshaping how we think.",
+        "philosophy",
+    ),
+    (
+        "The Confidence Gap",
+        "https://www.theatlantic.com/magazine/archive/2014/07/the-confidence-gap/359815/",
+        "The well-documented difference in how men and women apply for jobs they're not qualified for.",
+        "philosophy",
+    ),
+    (
+        "The Coddling of the American Mind",
+        "https://www.theatlantic.com/magazine/archive/2016/09/the-coddling-of-the-american-mind/399356/",
+        "Jonathan Haidt and Greg Lukianoff on cognitive distortions in modern campus life.",
+        "philosophy",
+    ),
+
+    # ============================================
+    # TECHNOLOGY — how things work, craft, deep tech essays
+    # ============================================
+    (
+        "A Brief Rant on the Future of Interaction Design",
+        "http://worrydream.com/ABriefRantOnTheFutureOfInteractionDesign/",
+        "Bret Victor asks why we accept 'pictures under glass' as the future of computing.",
+        "technology",
+    ),
+    (
+        "What Can a Technologist Do About Climate Change?",
+        "http://worrydream.com/ClimateChange/",
+        "Bret Victor's careful map of how software people can actually contribute.",
+        "technology",
+    ),
+    (
+        "The Future of Programming",
+        "http://worrydream.com/DynamicPicturesMotivation/",
+        "Bret Victor's wide-angle take on the directions programming should be going.",
+        "technology",
+    ),
+    (
+        "The Early History of Smalltalk",
+        "http://worrydream.com/EarlyHistoryOfSmalltalk/",
+        "Alan Kay's first-hand account of how an alternate universe of computing got built.",
+        "technology",
+    ),
+    (
+        "Kill Math",
+        "http://worrydream.com/KillMath/",
+        "Why math notation is a terrible interface — and what to replace it with.",
+        "technology",
+    ),
+    (
+        "Learnable Programming",
+        "http://worrydream.com/LearnableProgramming/",
+        "Bret Victor on what programming environments would look like if they were actually designed to teach.",
+        "technology",
+    ),
+    (
+        "Magic Ink: Information Software and the Graphical Interface",
+        "http://worrydream.com/MagicInk/",
+        "Bret Victor's manifesto for software that informs instead of controlling.",
+        "technology",
+    ),
+    (
+        "Media for Thinking the Unthinkable",
+        "http://worrydream.com/MediaForThinkingTheUnthinkable/",
+        "How representations shape the problems we can think about at all.",
+        "technology",
+    ),
+    (
+        "Stop Drawing Dead Fish",
+        "http://worrydream.com/StopDrawingDeadFish/",
+        "Bret Victor's vision for animation tools that let artists work with live behavior.",
+        "technology",
+    ),
+    (
+        "Why Books Don't Work",
+        "https://andymatuschak.org/books/",
+        "Andy Matuschak on the surprising failure of one of humanity's oldest tools.",
+        "technology",
+    ),
+    (
+        "How to Write Memorable Explanations",
+        "https://andymatuschak.org/hmwl/",
+        "Designing explanations so the ideas actually stick after you finish reading.",
+        "technology",
+    ),
+    (
+        "How to Write Good Prompts (Spaced Repetition)",
+        "https://andymatuschak.org/prompts/",
+        "Andy Matuschak on the underrated craft of writing flashcards that last.",
+        "technology",
+    ),
+    (
+        "Please Don't Learn to Code",
+        "https://blog.codinghorror.com/please-dont-learn-to-code/",
+        "Jeff Atwood's contrarian take during the 'learn to code' boom of the 2010s.",
+        "technology",
+    ),
+    (
+        "The Ten Commandments of Egoless Programming",
+        "https://blog.codinghorror.com/the-ten-commandments-of-egoless-programming/",
+        "Why your code isn't you — and what that means for how you accept criticism.",
+        "technology",
+    ),
+    (
+        "Why Can't Programmers... Program?",
+        "https://blog.codinghorror.com/why-cant-programmers-program/",
+        "The FizzBuzz post that became a tech-interview legend.",
+        "technology",
+    ),
+    (
+        "Programmer Interviews Aren't a Good Test of Programmer Skill",
+        "https://danluu.com/algorithms-interviews/",
+        "Dan Luu reviews the evidence that whiteboard interviews are mostly noise.",
+        "technology",
+    ),
+    (
+        "Cocktail Party Ideas",
+        "https://danluu.com/cocktail-ideas/",
+        "Dan Luu on the gap between ideas that sound impressive and ideas that work.",
+        "technology",
+    ),
+    (
+        "Diseconomies of Scale",
+        "https://danluu.com/diseconomies-scale/",
+        "Why bigger companies often produce worse software, despite having more resources.",
+        "technology",
+    ),
+    (
+        "Empirical Findings on Programming Languages",
+        "https://danluu.com/empirical-pl/",
+        "What we actually know — empirically — about whether language choice matters.",
+        "technology",
+    ),
+    (
+        "Everything Is Broken",
+        "https://danluu.com/everything-is-broken/",
+        "Dan Luu's catalog of why modern computing is held together with duct tape.",
+        "technology",
+    ),
+    (
+        "Files Are Hard",
+        "https://danluu.com/file-consistency/",
+        "All the ways your assumption that fwrite-then-fsync is safe is wrong.",
+        "technology",
+    ),
+    (
+        "In-House Is Often Cheaper",
+        "https://danluu.com/in-house/",
+        "When building it yourself actually beats buying SaaS — and when it doesn't.",
+        "technology",
+    ),
+    (
+        "Keyboard vs Mouse",
+        "https://danluu.com/keyboard-v-mouse/",
+        "Dan Luu measures the real-world performance differences.",
+        "technology",
+    ),
+    (
+        "Willingness to Look Stupid",
+        "https://danluu.com/look-stupid/",
+        "Why the cheapest career advantage is being willing to ask the obvious question.",
+        "technology",
+    ),
+    (
+        "How I Made My Website Faster",
+        "https://danluu.com/octopress-speedup/",
+        "Dan Luu walks through optimizing a static site, with measurements.",
+        "technology",
+    ),
+    (
+        "The P95 Problem",
+        "https://danluu.com/p95-skill/",
+        "Why optimizing average-case skill doesn't help you with the cases that actually matter.",
+        "technology",
+    ),
+    (
+        "People Are the Hard Part of Software",
+        "https://danluu.com/people-matter/",
+        "Dan Luu on why technical problems are easier than organizational ones.",
+        "technology",
+    ),
+    (
+        "Lessons from Postmortems",
+        "https://danluu.com/postmortem-lessons/",
+        "Dan Luu reads through hundreds of incident postmortems and finds patterns.",
+        "technology",
+    ),
+    (
+        "Programming Blogs",
+        "https://danluu.com/programming-blogs/",
+        "Dan Luu's curated list of programming blogs actually worth reading.",
+        "technology",
+    ),
+    (
+        "Sounds Easy",
+        "https://danluu.com/sounds-easy/",
+        "Why so many obvious-sounding software problems are actually catastrophically hard.",
+        "technology",
+    ),
+    (
+        "Wat",
+        "https://danluu.com/wat/",
+        "Gary Bernhardt's classic talk on the weird corners of JavaScript and Ruby.",
+        "technology",
+    ),
+    (
+        "How Web Bloat Affects Users with Slow Devices",
+        "https://danluu.com/web-bloat/",
+        "Dan Luu measures how the rich-world web has left the rest of the world behind.",
+        "technology",
+    ),
+    (
+        "Why Hardware Development Is Hard",
+        "https://danluu.com/why-hardware-development-is-hard/",
+        "Dan Luu on the structural differences that make hardware different from software.",
+        "technology",
+    ),
+    (
+        "The Polygons of Another World",
+        "https://fabiensanglard.net/another_world_polygons/",
+        "Fabien Sanglard's loving teardown of the 1991 game's rendering tricks.",
+        "technology",
+    ),
+    (
+        "Duke Nukem 3D Engine Internals",
+        "https://fabiensanglard.net/duke3d/index.php",
+        "How the Build engine pulled off 3D on hardware that shouldn't have managed it.",
+        "technology",
+    ),
+    (
+        "Fastdoom",
+        "https://fabiensanglard.net/fastdoom/",
+        "Modern optimizations applied to the original DOS DOOM source code, with measurements.",
+        "technology",
+    ),
+    (
+        "Git Code Review",
+        "https://fabiensanglard.net/git_code_review/index.php",
+        "Fabien Sanglard's annotated tour of how Git is actually built inside.",
+        "technology",
+    ),
+    (
+        "Quake II Engine Internals",
+        "https://fabiensanglard.net/quake2/index.php",
+        "What made Quake II's renderer so much faster than its predecessor.",
+        "technology",
+    ),
+    (
+        "Quake III Engine Internals",
+        "https://fabiensanglard.net/quake3/index.php",
+        "Including the famous fast inverse square root and why it shipped.",
+        "technology",
+    ),
+    (
+        "On Holy Wars and a Plea for Peace",
+        "https://gwern.net/holy-wars",
+        "Gwern's classic enumeration of the perennial tech tribal wars.",
+        "technology",
+    ),
+    (
+        "Faster (Notes on Speed)",
+        "https://gwern.net/note/faster",
+        "Gwern's catalog of cases where speed itself transformed a possibility into reality.",
+        "technology",
+    ),
+    (
+        "More People Should Write",
+        "https://jsomers.net/blog/more-people-should-write",
+        "James Somers on why writing publicly is the cheap career hack nobody uses.",
+        "technology",
+    ),
+    (
+        "Speed Matters",
+        "https://jsomers.net/blog/speed-matters",
+        "How the latency of your tools shapes the kinds of thoughts you're capable of having.",
+        "technology",
+    ),
+    (
+        "I Should Have Loved Biology",
+        "https://jsomers.net/i-should-have-loved-biology/",
+        "James Somers on how a poor education killed his interest in a field he should have loved.",
+        "technology",
+    ),
+    (
+        "Don't Feign Surprise",
+        "https://jvns.ca/blog/2017/04/27/no-feigning-surprise/",
+        "Julia Evans on the small social commitment that makes any community more learnable.",
+        "technology",
+    ),
+    (
+        "Profiling Go Programs With pprof",
+        "https://jvns.ca/blog/2017/09/24/profiling-go-with-pprof/",
+        "Julia Evans' practical walkthrough of finding bottlenecks in Go services.",
+        "technology",
+    ),
+    (
+        "What Makes a Good Question?",
+        "https://jvns.ca/blog/good-questions/",
+        "Julia Evans on the under-taught skill of asking questions that get you answers.",
+        "technology",
+    ),
+    (
+        "So You Want to Be a Wizard",
+        "https://jvns.ca/blog/so-you-want-to-be-a-wizard/",
+        "Julia Evans' love letter to the curious, blundering way people learn to use computers.",
+        "technology",
+    ),
+    (
+        "The Future Does Not Always Win",
+        "https://kk.org/thetechnium/the-future-doe/",
+        "Kevin Kelly on why predicted technological transitions sometimes never arrive.",
+        "technology",
+    ),
+    (
+        "The Internet Mapping Project",
+        "https://kk.org/thetechnium/the-internet-mapping-project/",
+        "Kevin Kelly collects people's hand-drawn maps of how they think the internet looks.",
+        "technology",
+    ),
+    (
+        "What Technology Wants",
+        "https://kk.org/thetechnium/what-technology/",
+        "Kevin Kelly reframes technology as the seventh kingdom of life.",
+        "technology",
+    ),
+    (
+        "A Codebase Is an Organism",
+        "https://meltingasphalt.com/a-codebase-is-an-organism/",
+        "Why software development resembles ecology more than engineering.",
+        "technology",
+    ),
+    (
+        "Ads Don't Work That Way",
+        "https://meltingasphalt.com/ads-dont-work-that-way/",
+        "Kevin Simler on the real, weirder mechanism by which advertising actually does its job.",
+        "technology",
+    ),
+    (
+        "Crony Beliefs",
+        "https://meltingasphalt.com/crony-beliefs/",
+        "Why we hold the beliefs we hold — and how some of them are kept around for politics, not truth.",
+        "technology",
+    ),
+    (
+        "Music in Human Evolution",
+        "https://meltingasphalt.com/music-in-human-evolution/",
+        "The deep evolutionary story of why humans care so much about sound patterns.",
+        "technology",
+    ),
+    (
+        "Personhood: A Game for Two or More Players",
+        "https://meltingasphalt.com/personhood-a-game-for-two-or-more-players/",
+        "Kevin Simler argues identity is more like a multiplayer protocol than a private fact.",
+        "technology",
+    ),
+    (
+        "Social Status: Down the Rabbit Hole",
+        "https://meltingasphalt.com/social-status-down-the-rabbit-hole/",
+        "An anthropology of the status games humans play, observed up close.",
+        "technology",
+    ),
+    (
+        "How Can We Develop Transformative Tools for Thought?",
+        "https://numinous.productions/ttft/",
+        "Andy Matuschak and Michael Nielsen's manifesto for a different kind of computing.",
+        "technology",
+    ),
+    (
+        "Attention Is Your Scarcest Resource",
+        "https://www.benkuhn.net/attention/",
+        "Ben Kuhn on the underappreciated cost of context-switching at work.",
+        "technology",
+    ),
+    (
+        "In Defense of Blub Studies",
+        "https://www.benkuhn.net/outliers/",
+        "Ben Kuhn on why studying mediocre things sometimes teaches more than studying great ones.",
+        "technology",
+    ),
+    (
+        "In Praise of the Weekly Review",
+        "https://www.benkuhn.net/weekly/",
+        "Why the cheap practice of looking back once a week compounds enormously.",
+        "technology",
+    ),
+    (
+        "You and Your Research — Richard Hamming",
+        "https://www.cs.virginia.edu/~robins/YouAndYourResearch.html",
+        "The transcript of Hamming's talk on what separates ordinary scientists from great ones.",
+        "technology",
+    ),
+    (
+        "Are We Really Engineers?",
+        "https://www.hillelwayne.com/post/are-we-really-engineers/",
+        "Hillel Wayne interviews real engineers across disciplines on what software engineers share — and don't.",
+        "technology",
+    ),
+    (
+        "Divide by Zero",
+        "https://www.hillelwayne.com/post/divide-by-zero/",
+        "The surprisingly rich history of how mathematicians thought about division by zero.",
+        "technology",
+    ),
+    (
+        "I Read Clean Code So You Don't Have To",
+        "https://www.hillelwayne.com/post/uncle-bob/",
+        "Hillel Wayne's careful, generous critique of one of the field's most influential books.",
+        "technology",
+    ),
+    (
+        "We Are Not Special",
+        "https://www.hillelwayne.com/post/we-are-not-special/",
+        "Hillel Wayne on the case that software engineering really is engineering.",
+        "technology",
     ),
     (
         "Things You Should Never Do, Part I",
         "https://www.joelonsoftware.com/2000/04/06/things-you-should-never-do-part-i/",
-        "Joel Spolsky on why rewriting software from scratch is almost always a mistake."
+        "Joel Spolsky's classic essay on why rewriting from scratch is almost always wrong.",
+        "technology",
+    ),
+    (
+        "The Joel Test: 12 Steps to Better Code",
+        "https://www.joelonsoftware.com/2000/08/09/the-joel-test-12-steps-to-better-code/",
+        "A two-decade-old checklist that still separates serious dev shops from amateurs.",
+        "technology",
+    ),
+    (
+        "Back to Basics",
+        "https://www.joelonsoftware.com/2001/12/11/back-to-basics/",
+        "Joel Spolsky reminds you what's actually happening inside the abstractions you depend on.",
+        "technology",
     ),
     (
         "Fire and Motion",
         "https://www.joelonsoftware.com/2002/01/06/fire-and-motion/",
-        "Joel Spolsky on the art of moving forward every day and not getting pinned down."
+        "How great companies use shipping velocity as a weapon against slower competitors.",
+        "technology",
     ),
     (
-        "Politics is the Mind-Killer",
-        "https://www.lesswrong.com/posts/9weLK2AJ9JEt2Tt8f/politics-is-the-mind-killer",
-        "Eliezer Yudkowsky on why political topics shut down rational thinking."
+        "The Law of Leaky Abstractions",
+        "https://www.joelonsoftware.com/2002/11/11/the-law-of-leaky-abstractions/",
+        "Every abstraction leaks — and why you still need to know what's under the hood.",
+        "technology",
     ),
     (
-        "The Rise and Fall of Peer Review",
-        "https://www.experimental-history.com/p/the-rise-and-fall-of-peer-review",
-        "Adam Mastroianni on why science's 60-year experiment with peer review has failed."
+        "Architecture Astronauts Take Over",
+        "https://www.joelonsoftware.com/2008/05/01/architecture-astronauts-take-over/",
+        "Joel Spolsky's warning about people who think the answer is always more abstraction.",
+        "technology",
+    ),
+
+    # ============================================
+    # PROGRESS — growth, civilization, the story of how we built this
+    # ============================================
+    (
+        "Expectations and Reality",
+        "https://collabfund.com/blog/expectations-and-reality/",
+        "Morgan Housel: most unhappiness comes from expectations growing faster than reality.",
+        "progress",
+    ),
+    (
+        "The Reasonable Optimist",
+        "https://collabfund.com/blog/the-reasonable-optimist/",
+        "Why the reasonable position on the future is grounded optimism, not naive cheer.",
+        "progress",
+    ),
+    (
+        "Longevity FAQ",
+        "https://nintil.com/longevity",
+        "Jose Luis Ricon's comprehensive primer on what we actually know about extending lifespan.",
+        "progress",
+    ),
+    (
+        "The World Is Much Better; The World Is Awful; The World Can Be Much Better",
+        "https://ourworldindata.org/much-better-awful-can-be-better",
+        "Max Roser's framing of holding three true things at once about global progress.",
+        "progress",
+    ),
+    (
+        "An Elegant Puzzle",
+        "https://press.stripe.com/an-elegant-puzzle",
+        "Will Larson on the systems thinking required to scale an engineering organization.",
+        "progress",
+    ),
+    (
+        "Poor Charlie's Almanack",
+        "https://press.stripe.com/poor-charlies-almanack",
+        "Stripe Press' edition of Charlie Munger's collected wisdom on thinking and living.",
+        "progress",
+    ),
+    (
+        "Scaling People",
+        "https://press.stripe.com/scaling-people",
+        "Claire Hughes Johnson's hard-won playbook for how to grow an organization.",
+        "progress",
+    ),
+    (
+        "The Dream Machine",
+        "https://press.stripe.com/the-dream-machine",
+        "Mitchell Waldrop's history of the people who imagined the personal computer.",
+        "progress",
+    ),
+    (
+        "Working in Public",
+        "https://press.stripe.com/working-in-public",
+        "Nadia Eghbal on the economics of open source and the lonely lives of maintainers.",
+        "progress",
+    ),
+    (
+        "A New Philosophy of Progress",
+        "https://rootsofprogress.org/a-new-philosophy-of-progress",
+        "Jason Crawford's call for an intellectual movement that takes human flourishing seriously.",
+        "progress",
+    ),
+    (
+        "Industrial Literacy",
+        "https://rootsofprogress.org/industrial-literacy",
+        "Why everyone should understand where their food, energy, and stuff actually come from.",
+        "progress",
+    ),
+    (
+        "Instant Stone (Just Add Water)",
+        "https://rootsofprogress.org/instant-stone-just-add-water",
+        "The Roman invention of concrete is more interesting than your history teacher made it sound.",
+        "progress",
+    ),
+    (
+        "Iron, from Mythical to Mundane",
+        "https://rootsofprogress.org/iron-from-mythical-to-mundane",
+        "How the metal that built civilization went from rare-as-gold to absurdly cheap.",
+        "progress",
+    ),
+    (
+        "Navigating the High Seas",
+        "https://rootsofprogress.org/navigating-the-high-seas",
+        "The 18th-century quest to solve the longitude problem, and what it teaches about R&D.",
+        "progress",
+    ),
+    (
+        "Progress, Humanism, and Agency",
+        "https://rootsofprogress.org/progress-humanism-agency",
+        "Jason Crawford's argument for taking responsibility for the future.",
+        "progress",
+    ),
+    (
+        "Progress Studies as a Civic Duty",
+        "https://rootsofprogress.org/progress-studies-a-civic-duty",
+        "Why understanding how progress happens is the unfinished work of every generation.",
+        "progress",
+    ),
+    (
+        "Progress Studies as a Moral Imperative",
+        "https://rootsofprogress.org/progress-studies-a-moral-imperative",
+        "If you care about reducing suffering, you should care about how progress happens.",
+        "progress",
+    ),
+    (
+        "Smallpox and Vaccines",
+        "https://rootsofprogress.org/smallpox-and-vaccines",
+        "Just how unimaginably bad smallpox was — and how we beat it.",
+        "progress",
+    ),
+    (
+        "The Techno-Humanist Manifesto",
+        "https://rootsofprogress.org/the-techno-humanist-manifesto",
+        "Jason Crawford's compressed worldview: technology as the project of human dignity.",
+        "progress",
+    ),
+    (
+        "Turning Air Into Bread",
+        "https://rootsofprogress.org/turning-air-into-bread",
+        "The Haber-Bosch process: how we learned to feed billions by pulling nitrogen from the air.",
+        "progress",
+    ),
+    (
+        "We Need a New Philosophy of Progress",
+        "https://rootsofprogress.org/we-need-a-new-philosophy-of-progress",
+        "An expanded essay-version case for a deliberate intellectual movement around progress.",
+        "progress",
+    ),
+    (
+        "Why AC Won",
+        "https://rootsofprogress.org/why-ac-won",
+        "The strange history of AC vs. DC and what it teaches about technological standards.",
+        "progress",
+    ),
+    (
+        "Why Did We Wait So Long for the Bicycle?",
+        "https://rootsofprogress.org/why-did-we-wait-so-long-for-the-bicycle",
+        "The unsolved historical puzzle of why such a simple invention took so long.",
+        "progress",
+    ),
+    (
+        "Why Pessimism Sounds Smart",
+        "https://rootsofprogress.org/why-pessimism-sounds-smart",
+        "Sounding skeptical signals intelligence, but it's mostly wrong.",
+        "progress",
+    ),
+    (
+        "Stripe Atlas Guides",
+        "https://stripe.com/atlas/guides",
+        "Patrick McKenzie's comprehensive guides to running an early-stage internet business.",
+        "progress",
+    ),
+    (
+        "The Business of SaaS",
+        "https://stripe.com/atlas/guides/business-of-saas",
+        "Patrick McKenzie's deep dive on the economics that distinguish software-as-a-service.",
+        "progress",
+    ),
+    (
+        "Construction Costs Rarely Fall",
+        "https://www.construction-physics.com/p/construction-costs-rarely-fall",
+        "Brian Potter on why the price of building things keeps going up.",
+        "progress",
+    ),
+    (
+        "Every Building in America: An Analysis",
+        "https://www.construction-physics.com/p/every-building-in-america-an-analysis",
+        "What you can learn from looking at the geographic distribution of every structure.",
+        "progress",
+    ),
+    (
+        "Helium Is Hard to Replace",
+        "https://www.construction-physics.com/p/helium-is-hard-to-replace",
+        "The strange supply chain behind a noble gas we mostly use for balloons.",
+        "progress",
+    ),
+    (
+        "How an Oil Refinery Works",
+        "https://www.construction-physics.com/p/how-an-oil-refinery-works",
+        "Brian Potter walks through the awesome industrial process inside every refinery.",
+        "progress",
+    ),
+    (
+        "How Long Do We Wait for New Inventions?",
+        "https://www.construction-physics.com/p/how-long-do-we-wait-for-new-inventions",
+        "The historical lag time between invention and impact, with case studies.",
+        "progress",
+    ),
+    (
+        "Information and Technological Evolution",
+        "https://www.construction-physics.com/p/information-and-technological-evolution",
+        "Why the diffusion of know-how, not just inventions, drives technological progress.",
+        "progress",
+    ),
+    (
+        "A Brief History Of Instant Coffee",
+        "https://www.worksinprogress.co/issue/a-brief-history-of-instant-coffee/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Ai From Superintelligence To Chatgpt",
+        "https://www.worksinprogress.co/issue/ai-from-superintelligence-to-chatgpt/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Anti Growth Safetyism",
+        "https://www.worksinprogress.co/issue/anti-growth-safetyism/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Brain Computer Interfaces",
+        "https://www.worksinprogress.co/issue/brain-computer-interfaces/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Build State Capacity By Building Charter Cities",
+        "https://www.worksinprogress.co/issue/build-state-capacity-by-building-charter-cities/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Building Back Faster",
+        "https://www.worksinprogress.co/issue/building-back-faster/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Engineering The Disposable Diaper",
+        "https://www.worksinprogress.co/issue/engineering-the-disposable-diaper/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Escaping Sciences Paradox",
+        "https://www.worksinprogress.co/issue/escaping-sciences-paradox/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Escaping The Ogallala Trap",
+        "https://www.worksinprogress.co/issue/escaping-the-ogallala-trap/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Fertility On Demand",
+        "https://www.worksinprogress.co/issue/fertility-on-demand/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Gentle Density",
+        "https://www.worksinprogress.co/issue/gentle-density/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How Airbus Took Off",
+        "https://www.worksinprogress.co/issue/how-airbus-took-off/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How Australia Really Stopped The Boats",
+        "https://www.worksinprogress.co/issue/how-australia-really-stopped-the-boats/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How Big Data Created The Modern Dairy Cow",
+        "https://www.worksinprogress.co/issue/how-big-data-created-the-modern-dairy-cow/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How Covid Brought The Future Back",
+        "https://www.worksinprogress.co/issue/how-covid-brought-the-future-back/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How Dc Densified",
+        "https://www.worksinprogress.co/issue/how-dc-densified/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How Israel Turned Homeowners Into Yimbys",
+        "https://www.worksinprogress.co/issue/how-israel-turned-homeowners-into-yimbys/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How Madrid Built Its Metro Cheaply",
+        "https://www.worksinprogress.co/issue/how-madrid-built-its-metro-cheaply/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How Mexico Built A State",
+        "https://www.worksinprogress.co/issue/how-mexico-built-a-state/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How One Kiwi Tamed Inflation",
+        "https://www.worksinprogress.co/issue/how-one-kiwi-tamed-inflation/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How Polyester Bounced Back",
+        "https://www.worksinprogress.co/issue/how-polyester-bounced-back/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How The Uk Learned And Unlearned Nuclear",
+        "https://www.worksinprogress.co/issue/how-the-uk-learned-and-unlearned-nuclear/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How The War On Drunk Driving Was Won",
+        "https://www.worksinprogress.co/issue/how-the-war-on-drunk-driving-was-won/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How The Worlds First Electric Grid Was Built",
+        "https://www.worksinprogress.co/issue/how-the-worlds-first-electric-grid-was-built/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How To Make An Antibody",
+        "https://www.worksinprogress.co/issue/how-to-make-an-antibody/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How Trust Undermines Science",
+        "https://www.worksinprogress.co/issue/how-trust-undermines-science/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "How We Fixed The Ozone Layer",
+        "https://www.worksinprogress.co/issue/how-we-fixed-the-ozone-layer/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Inflatable Space Stations",
+        "https://www.worksinprogress.co/issue/inflatable-space-stations/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Inventing The Dishwasher",
+        "https://www.worksinprogress.co/issue/inventing-the-dishwasher/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Lab Grown Diamonds",
+        "https://www.worksinprogress.co/issue/lab-grown-diamonds/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Local Warming",
+        "https://www.worksinprogress.co/issue/local-warming/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Londons Lost Ringways",
+        "https://www.worksinprogress.co/issue/londons-lost-ringways/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Making Energy Too Cheap To Meter",
+        "https://www.worksinprogress.co/issue/making-energy-too-cheap-to-meter/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Nanotechnologys Spring",
+        "https://www.worksinprogress.co/issue/nanotechnologys-spring/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Natalism For Progressives",
+        "https://www.worksinprogress.co/issue/natalism-for-progressives/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "New Yorks Long Road To Congestion Pricing",
+        "https://www.worksinprogress.co/issue/new-yorks-long-road-to-congestion-pricing/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Pandemic Prevention As Fire Fighting",
+        "https://www.worksinprogress.co/issue/pandemic-prevention-as-fire-fighting/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Parenting As A Public Good",
+        "https://www.worksinprogress.co/issue/parenting-as-a-public-good/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Planes Claims And Automobiles",
+        "https://www.worksinprogress.co/issue/planes-claims-and-automobiles/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Plastic Roads",
+        "https://www.worksinprogress.co/issue/plastic-roads/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Scientific Slowdown Is Not Inevitable",
+        "https://www.worksinprogress.co/issue/scientific-slowdown-is-not-inevitable/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Securing Posterity",
+        "https://www.worksinprogress.co/issue/securing-posterity/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Steam Networks",
+        "https://www.worksinprogress.co/issue/steam-networks/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Sunscreen For The Planet",
+        "https://www.worksinprogress.co/issue/sunscreen-for-the-planet/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Taming The Stars",
+        "https://www.worksinprogress.co/issue/taming-the-stars/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The Asbestos Times",
+        "https://www.worksinprogress.co/issue/the-asbestos-times/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The Bad Science Behind Expensive Nuclear",
+        "https://www.worksinprogress.co/issue/the-bad-science-behind-expensive-nuclear/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The Beauty Of Batteries",
+        "https://www.worksinprogress.co/issue/the-beauty-of-batteries/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The Beauty Of Concrete",
+        "https://www.worksinprogress.co/issue/the-beauty-of-concrete/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The End Of Acid Rain",
+        "https://www.worksinprogress.co/issue/the-end-of-acid-rain/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The End Of Lead",
+        "https://www.worksinprogress.co/issue/the-end-of-lead/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The Future Of Weight Loss",
+        "https://www.worksinprogress.co/issue/the-future-of-weight-loss/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The Golden Age Of Vaccine Development",
+        "https://www.worksinprogress.co/issue/the-golden-age-of-vaccine-development/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The Great Downzoning",
+        "https://www.worksinprogress.co/issue/the-great-downzoning/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The Housing Theory Of Everything",
+        "https://www.worksinprogress.co/issue/the-housing-theory-of-everything/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The Invention Of Buses",
+        "https://www.worksinprogress.co/issue/the-invention-of-buses/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The Magic Of Through Running",
+        "https://www.worksinprogress.co/issue/the-magic-of-through-running/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The Maintenance Race",
+        "https://www.worksinprogress.co/issue/the-maintenance-race/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "The Nimby Problem",
+        "https://www.worksinprogress.co/issue/the-nimby-problem/",
+        "A durable essay worth your attention.",
+        "progress",
+    ),
+    (
+        "Why Britain Doesnt Build",
+        "https://www.worksinprogress.co/issue/why-britain-doesnt-build/",
+        "A durable essay worth your attention.",
+        "progress",
     ),
 ]
 
 
 def get_daily_article() -> tuple:
-    """
-    Get today's article recommendation.
-    Uses a seeded shuffle per cycle so the order isn't linear
-    but is still deterministic (same article all day).
-    """
+    """Today's article (deterministic same-article-all-day, seeded shuffle per cycle)."""
     n = len(ARTICLES)
     day_of_year = date.today().timetuple().tm_yday
     cycle = day_of_year // n
     position = day_of_year % n
-
-    # Seed shuffle with the cycle number — each full pass gets a new order
     rng = random.Random(cycle)
     indices = list(range(n))
     rng.shuffle(indices)
+    title, url, description, _theme = ARTICLES[indices[position]]
+    return title, url, description
 
+
+def get_daily_article_with_theme() -> tuple:
+    """Same as get_daily_article but includes theme as 4th element."""
+    n = len(ARTICLES)
+    day_of_year = date.today().timetuple().tm_yday
+    cycle = day_of_year // n
+    position = day_of_year % n
+    rng = random.Random(cycle)
+    indices = list(range(n))
+    rng.shuffle(indices)
     return ARTICLES[indices[position]]
 
 
 def get_random_article() -> tuple:
-    """Get a random article (for on-demand requests)."""
-    return random.choice(ARTICLES)
+    """Random article (returns 3-tuple for backward compat)."""
+    title, url, description, _theme = random.choice(ARTICLES)
+    return title, url, description
 
 
 def get_random_article_excluding(exclude_titles: list) -> tuple:
-    """Get a random article, avoiding recently seen titles."""
+    """Random article excluding seen titles (returns 3-tuple)."""
     available = [a for a in ARTICLES if a[0] not in exclude_titles]
-    # If all have been seen, reset and pick from full list
     if not available:
         available = ARTICLES
-    return random.choice(available)
+    title, url, description, _theme = random.choice(available)
+    return title, url, description
 
 
 def format_article_block(title: str, url: str, description: str) -> str:

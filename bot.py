@@ -624,7 +624,7 @@ def handle_message(event, say):
 - `read` - Today's article
 - `review` - Weekly review
 
-*I'll DM you at {time} each morning.*
+*I'll DM you at {time} on weekday mornings.*
         """.format(time=MORNING_TIME)
         say(help_text)
 
@@ -875,11 +875,11 @@ def setup_scheduler():
     tz = pytz.timezone(TIMEZONE)
     scheduler = BackgroundScheduler(timezone=tz)
 
-    # Morning planning
+    # Morning planning — weekdays only (Mon–Fri)
     hour, minute = MORNING_TIME.split(":")
     scheduler.add_job(
         trigger_morning_planning,
-        CronTrigger(hour=int(hour), minute=int(minute), timezone=tz),
+        CronTrigger(day_of_week='mon-fri', hour=int(hour), minute=int(minute), timezone=tz),
         id="morning_planning",
         replace_existing=True,
         misfire_grace_time=300
@@ -889,7 +889,7 @@ def setup_scheduler():
 
     job = scheduler.get_job("morning_planning")
     if job and job.next_run_time:
-        logger.info(f"Scheduler started. Morning planning at {MORNING_TIME} {TIMEZONE}")
+        logger.info(f"Scheduler started. Morning planning at {MORNING_TIME} {TIMEZONE} (weekdays only)")
         logger.info(f"Next scheduled run: {job.next_run_time.strftime('%Y-%m-%d %H:%M:%S %Z')}")
 
     return scheduler

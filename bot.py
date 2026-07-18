@@ -16,6 +16,7 @@ import os
 import re
 import logging
 import threading
+from pathlib import Path
 from functools import wraps
 from datetime import datetime, date, timedelta
 from dotenv import load_dotenv
@@ -30,8 +31,10 @@ import pytz
 import db
 import articles
 
-# Load environment
-load_dotenv()
+# Load environment from the .env next to this file, and let it WIN over any
+# stale/empty vars lingering in the shell (override=True). Without this, a
+# leftover DB_HOST="" in the terminal makes db.py silently fall back to SQLite.
+load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

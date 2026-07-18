@@ -45,11 +45,21 @@ MY_USER_ID = os.environ.get("MY_USER_ID")
 MORNING_TIME = os.environ.get("MORNING_TIME", "11:30")
 TIMEZONE = os.environ.get("TIMEZONE", "Asia/Karachi")
 
+# Which database did we connect to? db.py picks Postgres when DB_HOST is set,
+# otherwise it silently falls back to a local SQLite file. Surfacing this at
+# startup prevents the "extension shows stale tasks" confusion.
+DB_BACKEND = (
+    "Supabase (Postgres)" if os.environ.get("DB_HOST")
+    else "local SQLite — FALLBACK, NOT your Supabase data!"
+)
+
 # Module-level scheduler (set in setup_scheduler)
 scheduler = None
 
 # Debug: log config on import
-print(f"[CONFIG] MORNING_TIME={MORNING_TIME}, TIMEZONE={TIMEZONE}")
+print(f"[CONFIG] MORNING_TIME={MORNING_TIME}, TIMEZONE={TIMEZONE}, DB={DB_BACKEND}")
+if not os.environ.get("DB_HOST"):
+    print("[WARN] DB_HOST not set — using local SQLite. Set DB_* in .env to reach your live tasks.")
 
 # ============================================
 # HTTP API for Chrome Extension
@@ -930,6 +940,7 @@ if __name__ == "__main__":
     ================================
     Morning planning: {MORNING_TIME} {TIMEZONE}
     User ID: {MY_USER_ID or 'Not set'}
+    Database: {DB_BACKEND}
     API: {'Enabled on port ' + str(API_PORT) if API_TOKEN else 'Disabled (set API_TOKEN)'}
 
     DM the bot in Slack to get started.

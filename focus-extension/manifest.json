@@ -13,7 +13,6 @@
   ],
 
   "host_permissions": [
-    "https://*.railway.app/*",
     "http://localhost:*/*"
   ],
 

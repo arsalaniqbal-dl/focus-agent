@@ -74,7 +74,7 @@ EXTENSION_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'focus-
 api = Flask(__name__, static_folder=EXTENSION_DIR, static_url_path='/app/static')
 CORS(api, resources={
     r"/api/*": {
-        "origins": ["chrome-extension://*", "http://localhost:*", "https://*.railway.app"],
+        "origins": ["chrome-extension://*", "http://localhost:*"],
         "methods": ["GET", "POST", "DELETE", "OPTIONS"],
         "allow_headers": ["Authorization", "Content-Type"]
     }
@@ -934,15 +934,20 @@ if __name__ == "__main__":
     else:
         logger.warning("API_TOKEN not set - HTTP API disabled")
 
-    # Start scheduler
-    scheduler = setup_scheduler()
+    # Start scheduler — unless DISABLE_SCHEDULER is set. The launchd auto-start
+    # sets this so the always-on local bot serves the API + Slack commands but
+    # does NOT fire a morning DM (GitHub Actions already sends that one).
+    if os.environ.get("DISABLE_SCHEDULER"):
+        logger.info("DISABLE_SCHEDULER set — local morning scheduler NOT started (GitHub Actions sends the morning DM).")
+    else:
+        scheduler = setup_scheduler()
 
     # Start bot
     print(f"""
     ================================
     FocusPrompter is running!
     ================================
-    Morning planning: {MORNING_TIME} {TIMEZONE}
+    Morning planning: {(MORNING_TIME + ' ' + TIMEZONE) if not os.environ.get('DISABLE_SCHEDULER') else 'disabled locally (GitHub Actions handles it)'}
     User ID: {MY_USER_ID or 'Not set'}
     Database: {DB_BACKEND}
     API: {'Enabled on port ' + str(API_PORT) if API_TOKEN else 'Disabled (set API_TOKEN)'}

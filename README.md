@@ -166,7 +166,7 @@ The morning DM fires from GitHub Actions regardless of whether the local bot is 
 
 ## Daily Reading
 
-FocusPrompter includes 30 curated articles that rotate daily:
+FocusPrompter includes 405 curated articles that rotate daily:
 
 - *You and Your Research* — Richard Hamming
 - *Speed Matters* — James Somers
@@ -174,7 +174,7 @@ FocusPrompter includes 30 curated articles that rotate daily:
 - *The Bus Ticket Theory of Genius* — Paul Graham
 - *Becoming a Magician* — Autotranslucence
 - *Meditations on Moloch* — Scott Alexander
-- And 24 more...
+- And 399 more...
 
 Type `read` anytime to see today's recommendation.
 

@@ -6,6 +6,10 @@ __pycache__/
 
 # Data
 *.db
+*.bak
+
+# Logs (launchd background bot output)
+logs/
 
 # IDE
 .vscode/

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  FocusPrompter auto-start (macOS launchd user agent).
+
+  Install:   cp launchd/com.focusprompter.bot.plist ~/Library/LaunchAgents/
+             launchctl load -w ~/Library/LaunchAgents/com.focusprompter.bot.plist
+  Status:    launchctl list | grep focusprompter
+  Stop:      launchctl unload -w ~/Library/LaunchAgents/com.focusprompter.bot.plist
+  Logs:      logs/bot.out.log  and  logs/bot.err.log
+
+  DISABLE_SCHEDULER=1 keeps this always-on bot from firing a second morning DM
+  (GitHub Actions already sends the daily one). It still serves the extension
+  API + interactive Slack commands.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.focusprompter.bot</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/arsalaniqbal/Projects/OperatingSystem/focus-agent/venv/bin/python</string>
+        <string>/Users/arsalaniqbal/Projects/OperatingSystem/focus-agent/bot.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/arsalaniqbal/Projects/OperatingSystem/focus-agent</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>DISABLE_SCHEDULER</key>
+        <string>1</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/arsalaniqbal/Projects/OperatingSystem/focus-agent/logs/bot.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/arsalaniqbal/Projects/OperatingSystem/focus-agent/logs/bot.err.log</string>
+</dict>
+</plist>

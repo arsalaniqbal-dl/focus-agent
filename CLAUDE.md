@@ -16,7 +16,7 @@ Personal Slack bot + Chrome extension for daily task management and focus.
 focus-agent/
 ├── bot.py              # Main entry point — Slack bot + Flask API server + scheduler
 ├── db.py               # SQLite storage layer (tasks, daily_plans tables)
-├── articles.py         # Curated reading list (30 articles, rotates by day-of-year)
+├── articles.py         # Curated reading list (405 articles, rotates by day-of-year)
 ├── create_profile.py   # Bot profile image generator (PIL)
 ├── focus-extension/    # Chrome extension (new tab page)
 │   ├── manifest.json   # Extension manifest v3

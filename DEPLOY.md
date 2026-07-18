@@ -1,134 +1,81 @@
-# Deploy FocusPrompter to Railway (12 hrs/day)
+# Deploy FocusPrompter (serverless morning DM)
 
-Run the bot only during waking hours to maximize Railway's free tier.
+FocusPrompter no longer needs an always-on host. The weekday-morning digest is
+sent by a **GitHub Actions cron job** (`.github/workflows/morning-dm.yml`) that
+connects to your existing Supabase database and posts to Slack. It's free on a
+public repo and there's no server to run or pay for.
 
-**Result:** 500 free hours = ~41 days of 12-hour daily usage
-
----
-
-## Step 1: Push to GitHub
-
-```bash
-cd /Users/arsalaniqbal/Projects/OperatingSystem/focus-agent
-
-# Initialize git repo
-git init
-git add .
-git commit -m "Initial commit: FocusPrompter"
-
-# Create repo on GitHub, then:
-git remote add origin https://github.com/YOUR_USERNAME/focus-agent.git
-git branch -M main
-git push -u origin main
-```
+**Tradeoff:** without an always-on process there is no Socket Mode listener, so
+interactive Slack commands (`add`, `list`, `done`, buttons) and the Chrome
+extension / `/app` web UI are no longer served. The morning message is a one-way
+digest. Your task history and article rotation are unaffected — see below.
 
 ---
 
-## Step 2: Deploy to Railway
+## What still works vs. what stops
 
-1. Go to https://railway.app and sign in with GitHub
-2. Click **New Project** → **Deploy from GitHub repo**
-3. Select your `focus-agent` repo
-4. Railway will auto-detect the Procfile
+| Feature | Status |
+|---------|--------|
+| Weekday morning DM (pending tasks + carryover + daily article) | ✅ via GitHub Actions |
+| Task history in Supabase | ✅ untouched (Action reads the same DB) |
+| Daily article rotation | ✅ deterministic by day-of-year — sequence continues unchanged |
+| Interactive DM commands (`add`/`list`/`done`/`snooze`) | ❌ needs Socket Mode (always-on) |
+| Message buttons / overflow menus | ❌ needs a running listener |
+| Chrome extension + `/app` web UI | ❌ needs the Flask server |
 
-### Add Environment Variables
-
-In Railway dashboard → your service → **Variables** tab:
-
-```
-SLACK_BOT_TOKEN=xoxb-your-token
-SLACK_APP_TOKEN=xapp-your-token
-MY_USER_ID=U095158463F
-MORNING_TIME=11:00
-TIMEZONE=Asia/Karachi
-```
-
-### Get Railway Service ID
-
-1. In Railway dashboard, click your service
-2. Look at the URL: `https://railway.app/project/XXX/service/YYY`
-3. The `YYY` part is your **Service ID**
+To manage tasks you can run `python bot.py` locally on demand (it still speaks to
+Supabase if the `DB_*` vars are set), or edit rows directly in Supabase.
 
 ---
 
-## Step 3: Set Up Scheduled Start/Stop
+## Setup: GitHub Secrets
 
-This uses GitHub Actions (free) to start/stop Railway on a schedule.
+The Action needs the same credentials the bot used on Railway. In the repo →
+**Settings → Secrets and variables → Actions → New repository secret**, add:
 
-### Get Railway API Token
+| Secret | Where to get it |
+|--------|-----------------|
+| `SLACK_BOT_TOKEN` | Slack app OAuth token (`xoxb-…`) |
+| `MY_USER_ID` | Your Slack member ID (`U…`) |
+| `DB_HOST` | Supabase → Project → Connect → Session Pooler host |
+| `DB_PORT` | Supabase pooler port (e.g. `5432` or `6543`) |
+| `DB_NAME` | `postgres` |
+| `DB_USER` | Supabase pooler user |
+| `DB_PASSWORD` | Supabase database password |
 
-1. Go to https://railway.app/account/tokens
-2. Click **Create Token**
-3. Name it "GitHub Actions"
-4. Copy the token
-
-### Add GitHub Secrets
-
-In your GitHub repo → **Settings** → **Secrets and variables** → **Actions**:
-
-| Secret Name | Value |
-|-------------|-------|
-| `RAILWAY_TOKEN` | Your Railway API token |
-| `RAILWAY_SERVICE_ID` | Service ID from step 2 |
-
-### Schedule (default)
-
-The workflow runs:
-- **Start:** 9:00 AM PKT (4:00 UTC) daily
-- **Stop:** 9:00 PM PKT (16:00 UTC) daily
-
-To change times, edit `.github/workflows/schedule-bot.yml`:
-```yaml
-schedule:
-  - cron: '0 4 * * *'   # Start time (UTC)
-  - cron: '0 16 * * *'  # Stop time (UTC)
-```
-
-Use https://crontab.guru to help with cron syntax.
+> Copy the `DB_*` values from your **Railway service variables** (or the Supabase
+> dashboard) so the Action reads the **same** database — this is what keeps your
+> full task history. If `DB_HOST` is missing, `send_morning.py` fails loudly
+> instead of silently sending an empty digest.
 
 ---
 
-## Step 4: Manual Control
+## Schedule
 
-You can also start/stop manually:
+`morning-dm.yml` runs `cron: '30 6 * * 1-5'` — 06:30 UTC = **11:30 Asia/Karachi**,
+Mon–Fri. Pakistan has no DST, so this is stable year-round. To change the time,
+edit the cron (UTC) in that file. GitHub cron is best-effort and can be delayed a
+few minutes under load.
 
-1. Go to GitHub repo → **Actions** → **Schedule Bot**
-2. Click **Run workflow**
-3. Select `start` or `stop`
+## Test it now
 
----
+Repo → **Actions → Morning DM → Run workflow**. You should get the DM within a
+few seconds. Check the run logs if not.
 
-## Verify It's Working
+## Keepalive
 
-1. Check Railway dashboard - service should show "Running" during scheduled hours
-2. DM the bot in Slack
-3. Check GitHub Actions tab for scheduled run history
-
----
-
-## Cost Breakdown
-
-| Usage | Hours/Month | Free Tier (500 hrs) |
-|-------|-------------|---------------------|
-| 24/7 | 720 hrs | ~20 days |
-| 12 hrs/day | 360 hrs | ~41 days |
-| 8 hrs/day | 240 hrs | ~62 days |
-
-After free tier: ~$5/month for always-on, or continue with scheduled runs.
+GitHub disables scheduled workflows after 60 days of repo inactivity.
+`keepalive.yml` pushes a trivial empty commit on the 1st of each month so the
+morning cron stays enabled. No action needed on your part.
 
 ---
 
-## Troubleshooting
+## Decommission Railway
 
-**Bot not responding:**
-- Check Railway logs: Dashboard → Service → **Deployments** → **View Logs**
-- Verify environment variables are set correctly
+Once the Action posts successfully:
 
-**Scheduled start/stop not working:**
-- Check GitHub Actions runs for errors
-- Verify secrets are set correctly
-- Make sure the Railway token hasn't expired
+1. Railway dashboard → your project → **Settings → Delete Service/Project**.
+2. Cancel/downgrade the Railway plan if you were on a paid one.
+3. Your data is safe — it lives in Supabase, not on Railway.
 
-**Morning message not arriving:**
-- Bot must be running at `MORNING_TIME`
-- Adjust schedule so bot starts before your morning time
+The old `RAILWAY_TOKEN` / `RAILWAY_SERVICE_ID` GitHub secrets can be deleted too.

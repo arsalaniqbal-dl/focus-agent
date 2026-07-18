@@ -8,7 +8,7 @@ Personal Slack bot + Chrome extension for daily task management and focus.
 
 **Stack:** Python 3.9+, slack-bolt, Flask, APScheduler, SQLite, Chrome Extension (vanilla JS/HTML/CSS)
 
-**Status:** Working MVP. Deployed to Railway with scheduled start/stop via GitHub Actions.
+**Status:** Working MVP. The weekday-morning DM runs serverless via a GitHub Actions cron (`send_morning.py` → `.github/workflows/morning-dm.yml`); data lives in Supabase Postgres. Railway has been decommissioned. Interactive Slack commands + the Chrome extension only work when `bot.py` is run on an always-on host (e.g. locally on demand); they are not currently hosted.
 
 ## Architecture
 
@@ -26,12 +26,12 @@ focus-agent/
 │   ├── js/             # Extension JS (API calls, UI)
 │   └── icons/          # Extension icons
 ├── index.html          # Landing page
-├── .github/workflows/  # Railway start/stop scheduler
+├── send_morning.py     # Serverless morning digest sender (run by GitHub Actions)
+├── .github/workflows/  # morning-dm.yml (weekday DM cron) + keepalive.yml
 ├── requirements.txt    # Python deps
-├── Procfile            # Railway: `worker: python bot.py`
 ├── .env.example        # Env var template
 ├── SETUP.md            # Slack app setup guide
-└── DEPLOY.md           # Railway deployment guide
+└── DEPLOY.md           # Serverless (GitHub Actions) deployment guide
 ```
 
 ## How It Works
@@ -112,7 +112,7 @@ python bot.py
 
 ## Known Limitations
 
-- SQLite on Railway's ephemeral filesystem means data resets on deploy. Needs PostgreSQL or persistent volume for production.
+- Data persists in Supabase Postgres (set via `DB_*` env vars); SQLite is only a local-dev fallback when `DB_HOST` is unset.
 - No tests yet.
 - Chrome extension uses hardcoded API URL from settings — no auto-discovery.
 - Python 3.9 (from runtime.txt) — could upgrade.

@@ -1,0 +1,37 @@
+name: Morning DM
+
+# Sends the weekday-morning FocusPrompter digest via GitHub Actions.
+# No always-on server needed — this replaces the Railway-hosted scheduler.
+#
+# Schedule is in UTC. 11:30 Asia/Karachi (UTC+5, no DST) = 06:30 UTC.
+# GitHub cron is best-effort and may be delayed a few minutes under load.
+# Public-repo Actions minutes are free and unlimited.
+
+on:
+  schedule:
+    - cron: '30 6 * * 1-5'   # 06:30 UTC = 11:30 PKT, Mon–Fri
+  workflow_dispatch:          # allow manual "Run workflow" from the Actions tab
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install slack-sdk psycopg2-binary python-dotenv
+
+      - name: Send morning digest
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          MY_USER_ID: ${{ secrets.MY_USER_ID }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: python send_morning.py

@@ -14,13 +14,17 @@ import sys
 import logging
 
 from dotenv import load_dotenv
+
+# Load .env BEFORE importing db — db.py selects its backend (SQLite vs Postgres)
+# at import time based on DB_HOST. In GitHub Actions the DB_* vars are real env
+# vars so this is moot, but it keeps local runs correct too.
+load_dotenv()
+
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 import db
 import articles
-
-load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)

@@ -20,6 +20,12 @@ from pathlib import Path
 from functools import wraps
 from datetime import datetime, date, timedelta
 from dotenv import load_dotenv
+
+# Load environment BEFORE importing db — db.py chooses SQLite vs Postgres at
+# import time based on DB_HOST, so .env must be in os.environ first. Load the
+# .env next to this file and let it WIN over any stale shell vars (override=True).
+load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
+
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -30,11 +36,6 @@ import pytz
 
 import db
 import articles
-
-# Load environment from the .env next to this file, and let it WIN over any
-# stale/empty vars lingering in the shell (override=True). Without this, a
-# leftover DB_HOST="" in the terminal makes db.py silently fall back to SQLite.
-load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

@@ -145,9 +145,24 @@ python bot.py
 
 DM the bot in Slack and type `help` to get started.
 
-## Deployment
+## How It Runs
 
-See [DEPLOY.md](DEPLOY.md) for instructions on deploying to Railway with scheduled start/stop (optimized for free tier).
+FocusPrompter runs **serverless** — no always-on host, no subscription:
+
+- The **weekday morning DM** is sent by a **GitHub Actions cron** (`send_morning.py` → `.github/workflows/morning-dm.yml`), reading from Supabase Postgres. This is a one-way digest.
+- Data lives in **Supabase**, independent of any host.
+
+See [DEPLOY.md](DEPLOY.md) for the full setup (GitHub secrets, schedule, keepalive).
+
+### Managing tasks (run the bot locally when needed)
+
+Because there's no always-on process, the interactive commands (`add`/`list`/`done`/`snooze`) and the Chrome extension only work **while `bot.py` is running on your machine**. To manage your real tasks:
+
+1. Put the Supabase `DB_*` values in your `.env` (see `.env.example`) so the bot hits your live data instead of an empty local SQLite.
+2. Run `python bot.py`, DM the bot to add/complete tasks, then quit it when done.
+3. (Optional) In the Chrome extension's settings, point the API URL at `http://localhost:8080` to use the extension while the bot runs locally.
+
+The morning DM fires from GitHub Actions regardless of whether the local bot is running.
 
 ## Daily Reading
 
@@ -167,21 +182,23 @@ Type `read` anytime to see today's recommendation.
 
 ```
 focus-agent/
-├── bot.py           # Main Slack bot logic
-├── db.py            # SQLite storage layer
+├── bot.py           # Main Slack bot (interactive; run locally to manage tasks)
+├── send_morning.py  # Serverless morning digest sender (run by GitHub Actions)
+├── db.py            # Storage layer (Supabase Postgres; SQLite fallback)
 ├── articles.py      # Curated reading list
-├── focus.db         # Your data (created on first run)
 ├── requirements.txt # Python dependencies
-├── Procfile         # For Railway deployment
+├── .github/workflows/ # morning-dm.yml (cron) + keepalive.yml
 ├── .env.example     # Environment template
 ├── index.html       # Landing page
 ├── SETUP.md         # Detailed setup guide
-└── DEPLOY.md        # Railway deployment guide
+└── DEPLOY.md        # Serverless (GitHub Actions) deployment guide
 ```
 
 ## Known Limitations
 
-**Data persistence:** Currently uses SQLite stored locally. On platforms with ephemeral filesystems (Railway, Heroku), data resets on each deployment. For production use, consider migrating to PostgreSQL or adding a persistent volume.
+**No always-on host:** Interactive Slack commands and the Chrome extension only work while `bot.py` runs locally. The morning DM is a one-way digest (no buttons). This is a deliberate $0 trade-off — see [DEPLOY.md](DEPLOY.md) for restoring full interactivity via a free always-on host.
+
+**Data persistence:** Production data lives in Supabase Postgres (`DB_*` env vars). SQLite (`focus.db`) is only a local-dev fallback used when `DB_HOST` is unset.
 
 ## License
 

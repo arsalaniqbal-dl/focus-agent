@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -Rs '{systemMessage:\"\\ud83d\\udccc FocusPrompter ops cheat-sheet loaded — see .claude/focusprompter-cheatsheet.md or just ask.\", hookSpecificOutput:{hookEventName:\"SessionStart\",additionalContext:.}}' \"$CLAUDE_PROJECT_DIR/.claude/focusprompter-cheatsheet.md\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
